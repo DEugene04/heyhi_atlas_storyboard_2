@@ -14,6 +14,9 @@ Endpoints
   POST /pipeline/music      L7  generate the background bed (Lyria)          [network+credits]
   POST /pipeline/render     L8  merge + title + transitions + subs + music   [local ffmpeg]
 
+  GET  /pdf-review/         review-first PDF prototype; intentionally stops
+                            at a locked Seedance preflight manifest
+
 THE RUN IS THE STATE
 There is no database. A run_id names a directory under STORAGE_ROOT, and every
 endpoint's precondition is "does the file the previous stage should have written
@@ -89,6 +92,7 @@ from app.schemas import (
 from app.libraries import CharacterEntry, load_audio_index, load_character_index
 
 from app.pipeline.patch_blueprint import patch_run, PatchError
+from app.pdf_review import router as pdf_review_router
 
 # storage root is env-overridable so tests/prod never share a tree
 STORAGE_ROOT = Path(
@@ -108,6 +112,10 @@ CHUNK = 1 << 20                       # 1 MB streaming reads
 _RUN_ID_RE = re.compile(r"^run_[a-z0-9]{8}$")
 
 app = FastAPI(title="Atlas Pipeline - Layer 1", version="1.0")
+
+# Review-only PDF workflow. Its final generation control is intentionally
+# locked; the existing text-to-video endpoints remain unchanged.
+app.include_router(pdf_review_router)
 
 def _run_dir(run_id: str, must_exist: bool = True) -> Path:
     """Resolve a run_id to its directory. Shape check + containment check (never

@@ -1,0 +1,934 @@
+{
+  "project_id": "pdf_124c9907",
+  "page_count": 101,
+  "settings": {
+    "pdf_url": "https://pdf-digitalization.s3.ap-southeast-1.amazonaws.com/atlas_storyboard/6)+IP+introduction+training+2026+new+employee+send+remove+logo.pdf",
+    "objective": "Explain the most important ideas clearly, with a presenter referring to source visuals from the deck.",
+    "language": "English",
+    "target_seconds": 75,
+    "avatar_url": ""
+  },
+  "recommended_pages": [
+    1,
+    16,
+    29,
+    44,
+    59,
+    71,
+    88,
+    100
+  ],
+  "slides": [
+    {
+      "page": 1,
+      "title": "Turning Ideas into",
+      "text": "Turning Ideas into Competitive Advantage Powered by IP Understand IP to Enhance Your Work",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_001.jpg",
+      "image_count": 5,
+      "drawing_count": 2,
+      "visual_score": 17
+    },
+    {
+      "page": 2,
+      "title": "•",
+      "text": "• เพื่อให้มีความรู้พื้นฐานเกี่ยวกับประเภทและความส าคัญของทรัพย์สินทางปัญญา (IP) • เพื่อให้สามารถประเมินความเสี่ยงในการละเมิดIP ของผู้อื่นเบื้องต้นได้ • เพื่อให้สามารถวิเคราะห์โอกาสในการจดทะเบียนคุ้มครองIP เบื้องต้นได้ • เพื่อให้ทราบมุมมองความสัมพันธ์ของ IP, R&D, Business Objective",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_002.jpg",
+      "image_count": 0,
+      "drawing_count": 1,
+      "visual_score": 1
+    },
+    {
+      "page": 3,
+      "title": "IP Team",
+      "text": "IP Team Sukhum Jane Book Fon Max Candy Phong Golf",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_003.jpg",
+      "image_count": 9,
+      "drawing_count": 3,
+      "visual_score": 30
+    },
+    {
+      "page": 4,
+      "title": "Topics",
+      "text": "Topics From Ideas to Impact 1. Boost Innovation From IP Insight : เสริม idea ในการท าสิ่งใหม่ด้วยข้อมูล IP 2. Protecting Our Innovations : ท ามาใหม่โดนcopy ซะงั้น ท าอย่างไรดี 3. Building Stronger Brand : คิดชื่อดีๆที่ใช้กับลูกค้าและไม่โดน copy ง่ายๆ 4. Monetizing Ideas Through IP : ต่อยอดการหาเงินจาก Idea ที่มีอยู่ 5. Managing IP Risks : เช็คชัวร์ก่อนขาย สบายใจไม่ละเมิด 6. IP Caution - External Collaboration : อยากร่วมมือกับคนข้างนอกมีประเด็น IP อะไร 7. IP Issues in AI Era : ท าเรื่องเกี่ยวกับ AI มีอะไรเกี่ยวกับ IP ไหม",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_004.jpg",
+      "image_count": 0,
+      "drawing_count": 2,
+      "visual_score": 2
+    },
+    {
+      "page": 5,
+      "title": "FROM IDEAS TO IMPACT",
+      "text": "FROM IDEAS TO IMPACT มีไอเดียต้องถูกปกป้องและต่อยอด",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_005.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 6,
+      "title": "LINE Case",
+      "text": "LINE Case",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_006.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 7,
+      "title": "Star War Case",
+      "text": "Star War Case",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_007.jpg",
+      "image_count": 1,
+      "drawing_count": 1,
+      "visual_score": 4
+    },
+    {
+      "page": 8,
+      "title": "นนท์ ธนนท์ กับ เคสลิขสิทธิ์",
+      "text": "นนท์ ธนนท์ กับ เคสลิขสิทธิ์ นนท์ ธนนท์ รีบขอโทษเจ้าของลิขสิทธิ์ หลังน าภาพมาท าเสื้อโดยไม่แจ้ง • เป็นภาพของ Lexie Pitzen ซึ่งเป็นนัก ออกแบบและสร้างสรรค์รูป • ทีมงานเอาภาพมาใช้โดยไม่ได้ขออนุญาต • นนท์ ธนนท์ post ขอโทษและเจรจา ชดเชยค่าเสียหาย",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_008.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 9,
+      "title": "Post-it Notes",
+      "text": "Post-it Notes “It was part of my job as a researcher to develop new adhesives, and at that time we wanted to develop bigger, stronger, tougher adhesives,\" said Dr. Spencer. \"This was none of those.\" 1980 - What Dr. Spencer discovered was something called microspheres which retain their stickiness but with a \"removability characteristic,“ Discovery Staying Power 1990s - Top consumer products of the decade - Inventors won highest honors and many awards within international engineering - 22 US Patents and Registered Trademark 2000s - Post-it Notes are sold in more than 100 countries and Post-it adhesive continues to be used on many 3M products Post-it Extreme Surface Post-it Tab",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_009.jpg",
+      "image_count": 3,
+      "drawing_count": 3,
+      "visual_score": 12
+    },
+    {
+      "page": 10,
+      "title": "Coca-Cola",
+      "text": "Coca-Cola The true magic of Coca-Cola lies not just in its taste But in its closely held trade secret. Trade secrets can be a recipe, formula, method, or even business strategy that is unknow to the public. Their indefinite life sets trade secrets apart from patents – so long as they remain secret. Once disclosed, however, they lose their legal protection",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_010.jpg",
+      "image_count": 7,
+      "drawing_count": 30,
+      "visual_score": 33
+    },
+    {
+      "page": 11,
+      "title": "Intellectual Property (IP) Concept",
+      "text": "Intellectual Property (IP) Concept",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_011.jpg",
+      "image_count": 3,
+      "drawing_count": 1,
+      "visual_score": 10
+    },
+    {
+      "page": 12,
+      "title": "ประเภท",
+      "text": "ประเภท สิ่งที่คุ้มครอง ตัวอย่างในบริษัท การคุ้มครอง 1. สิทธิบัตร (Patent) ผลิตภัณฑ์ใหม่ กระบวนการผลิตใหม่ เครื่องจักรใหม่ ระบบผนัง ระบบบ้านประหยัดพลังงาน ลวดลายกระเบื้องใหม่ ต้องจดทะเบียนกับกรม Function 20 ปี ออกแบบ ลวดลาย 10 ปี 2. ลิขสิทธิ์(Copyright) หนังสือ ดนตรีเพลง ภาพยนตร์ รูปภาพ สื่อโฆษณา โบรชัวร์/ แคตตาล็อค / คู่มือติดตั้ง คุ้มครองอัตโนมัติ อายุ 50 หลังจากเสียชีวิต อายุ 50 ส าหรับนิติบุคคล 3. ความลับทางการค้า (Trade Secret) ข้อมูลที่มีค่าทางธุรกิจซึ่งไม่ ต้องการเผยแพร่ออกไป สูตรการผลิต ข้อมูลทางธุรกิจ มีมาตรการจัดเก็บที่เหมาะสม อายุตราบเท่าที่รักษาความลับ 4. เครื่องหมายทางการค้า (Trademark) Brand, Logo ตราบริษัท เครื่องหมายสินค้ารุ่นต่างๆ ต้องจดทะเบียนกับกรม อายุตลอดไปตราบเท่าที่จ่าย ค่าธรรมเนียมทุก 10 ปี ทรัพย์สินทางปัญญาIntellectual Property (IP) ทรัพย์สินทางปัญญา คือ ผลงานอันเกิดจากการสร้างสรรค์ การประดิษฐ์ การคิดค้น ซึ่งมีกฎหมายให้ความคุ้มครอง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_012.jpg",
+      "image_count": 0,
+      "drawing_count": 32,
+      "visual_score": 12
+    },
+    {
+      "page": 13,
+      "title": "1. BOOSTING INNOVATION",
+      "text": "1. BOOSTING INNOVATION From IP INSIGHTS เสริม Idea ในการท าสิ่งใหม่ด้วยข้อมูล IP",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_013.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 14,
+      "title": "Example of Patent Information",
+      "text": "Example of Patent Information 2024",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_014.jpg",
+      "image_count": 4,
+      "drawing_count": 1,
+      "visual_score": 13
+    },
+    {
+      "page": 15,
+      "title": "WO2025164471A1",
+      "text": "WO2025164471A1 The bathtub's multi-layered sheet construction and efficient drainage system address the challenges of waterproofness and durability, ensuring strength and ease of shape formation, while facilitating effective water drainage. The sheet includes a plurality of layers, including: - a first layer formed of a water-impermeable material such as Polyurethane (PU) - a second layer formed of a durable material such as woven fabric of polyester resin fiber / polyethylene terephthalate (PET) layer) - a third layer with heat-retaining properties and disposed between first and second layer such as PU or PE Example of Patent Information",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_015.jpg",
+      "image_count": 3,
+      "drawing_count": 1,
+      "visual_score": 10
+    },
+    {
+      "page": 16,
+      "title": "สิทธิบัตร คือ เอกสารแสดงสิทธิที่ทางราชการออกให้เพื่อให้",
+      "text": "สิทธิบัตร คือ เอกสารแสดงสิทธิที่ทางราชการออกให้เพื่อให้ มีสิทธิในการผลิต ใช้ ขาย แต่เพียงผู้เดียวในประเทศนั้น ท าไมสิทธิบัตรถึงน่าสนใจในการศึกษาข้อมูล 1. ให้สิทธิระยะเวลาหนึ่ง แต่เจ้าของสิทธิบัตรต้อง เปิดเผยข้อมูลในการประดิษฐ์นั้น 2. เงื่อนไขการได้รับสิทธิบัตร คือ ใหม่ (ใหม่ในโลก) 3. มีสิทธิบัตรทั่วโลก 190 ล้านสิทธิบัตร ใน1 ปี มี สิทธิบัตรจดใหม่ประมาณ 3 ล้านสิทธิบัตร สิทธิบัตร บทความวิชาการ ลักษณะข้อมูล คนจดสิทธิบัตรมีเป้าหมาย คุ้มครองสิ่งประดิษฐ์ ดังนั้น จะเป็นการอธิบายรายละเอียดองค์ประกอบหรือวิธ สิ่งประดิษฐ์นั้น คนตีพิมพ์มุ่ง เผยแพร่ความรู้ และสร้างทฤษฎีใหม่ ดังนั้น จะเป็นการอธิบาย กลไก ปฏิกิริยา กราฟ ในการทดลองต่างๆ Format Problem - Solution Introduction, Methodology, Results, Discussion โครงสร้างภาษา ภาษาเทคนิคผสมเชิงกฎหมาย ภาษาวิชาการ การเข้าถึง เข้าถึงได้ฟรี จากฐานข้อมูลสาธารณะ มักต้องมีการสมัครสมาชิก (ScienceDirect ,Springer, Emerald) ข้อดี ให้รายละเอียดในการท าตามเป็นการประยุกต์ในการท า product หรือ process มีความน่าเชื่อเชิงวิชาการ ให้ความเข้าใจทฤษฎี ข้อเสีย ภาษาเข้าใจยาก, อาจไม่ได้มีผลการทดลองให้, เขียนกว้างเกินไป เน้นเชิงทฤษฎีมากกว่า มีค่าใช้จ่ายในการเข้าถึง สิทธิบัตรคืออะไร ท าไมถึงน่าสนใจ",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_016.jpg",
+      "image_count": 1,
+      "drawing_count": 37,
+      "visual_score": 15
+    },
+    {
+      "page": 17,
+      "title": "หน้าแรก",
+      "text": "หน้าแรก ใครเป็นเจ้าของ ใครเป็นผู้ประดิษฐ์ ยื่นเมื่อไหร่ บทคัดย่อ ข้อถือสิทธิ เป็นขอบเขตความ คุ้มครองทางกฎหมาย รูปภาพ ประกอบการอ่าน เนื้อหา เนื้อหา เล่าถึง ปัญหา (Problem) วิธี/องค์ประกอบในการแก้ปัญหา (Solution) โครงสร้างสิทธิบัตร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_017.jpg",
+      "image_count": 4,
+      "drawing_count": 9,
+      "visual_score": 21
+    },
+    {
+      "page": 18,
+      "title": "Patent information enables patent mapping, offering",
+      "text": "Patent information enables patent mapping, offering insights into emerging global trends • Analyzing the number of patents filed to determine which technologies attract the greatest interest from industry players. • Tracking who leads technological development from owning majority of patents. • Identifying the main areas of technological development. Example of Patent Information – Solar Cell Trend",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_018.jpg",
+      "image_count": 5,
+      "drawing_count": 4,
+      "visual_score": 19
+    },
+    {
+      "page": 19,
+      "title": "Business Opportunity Identification",
+      "text": "Business Opportunity Identification Design and Discovery Synthesis and Testing Optimization Certify Pilot Scale - Up Deployment and Commercialize Information from • Market Research • Paper/Journal Review • Patent (1) Information from • Paper/Journal Review • Patent (2,3) IP Protection (check novelty and avoid infringement) • Paper/Journal Review • Patent (4) How Patents support R&D 3. Get Idea for specific topic Macro Micro 1. Explore trend overview 2. Track main player movements Bio material 4. Claim scope analysis How Patents Support R&D",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_019.jpg",
+      "image_count": 29,
+      "drawing_count": 11,
+      "visual_score": 98
+    },
+    {
+      "page": 20,
+      "title": "เจอสิทธิบัตรของบริษัทระดับโลกน่าสนใจ",
+      "text": "เจอสิทธิบัตรของบริษัทระดับโลกน่าสนใจ - จดแค่ในต่างประเทศ - ไม่จดในประเทศไทย เจอสิทธิบัตรน่าสนใจ - จดในประเทศไทย สามารถใช้ ผลิต ขายในไทยได้ (ระวังสิทธิบัตรอื่นข้างเคียง) - ระวังอย่าส่งออกไปต่างประเทศที่มีการจดสิทธิบัตร - จดสิทธิบัตรขอบเขตนี้กันคนอื่นไม่ได้ - ถ้ามีการต่อยอด สามารถจดสิทธิบัตรสิ่งที่ต่อยอดได้ ไม่สามารถใช้ ผลิต ขายในไทย เช็คแล้วยัง active อยู่ เช็คแล้วว่า หมดอายุ หมดสิทธิ (ไม่จ่ายค่าธรรมเนียม) ไปแล้ว หลักการสิทธิบัตร – สิทธิบัตรจดประเทศไหนคุ้มครองประเทศนั้น Is it OK to use the idea from other patents?",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_020.jpg",
+      "image_count": 3,
+      "drawing_count": 19,
+      "visual_score": 21
+    },
+    {
+      "page": 21,
+      "title": "สิทธิบัตรการประดิษฐ์ และ อนุสิทธิบัตร",
+      "text": "สิทธิบัตรการประดิษฐ์ และ อนุสิทธิบัตร สิทธิบัตรออกแบบ ระบบเชื่อมต่อแผ่นพื้น บริษัท วีล็อกซ์ ลวดลายแผ่นพื้นแผ่นผนัง Wonderland Switzerland แผ่นมุงหลังคา บริษัท ผลิตภัณฑ์ตราเพชร ผนังส าเร็จรูป บริษัท ปตท. ฝักบัว Lixil ก็อกน ้า Lixil อ่างอาบน ้า Bathroom Design แผ่นผนังคอนกรีตมวลเบาส าเร็จรูป ชนิดมีรูกลวงส าหรับติดบัวเชิงผนัง บริษัท ไซมีส อีโคไลท์ แนวทาง ด้านล่างผนังถูกบากให้เป็นแถบยุบ (12) ให้ถึง รูกลวงและถูกเติมด้วยปูนหรือคอนกรีต (13) 2403002559 ปัญหา • ปกติบัวเชิงผนังจะติดยื่นออกมา • อยากจะติดให้ไปในแนวเดียวกับผนัง เพื่อเพิ่มพื้นที่ • จีงหาวิธีท าชิ้นส่วนส าเร็จรูปไม่ต้องท า ขอบคอนกรีตก่อน ช่วยลดเวลา 2201003607 ปัญหา หาวิธีต่อ interlock แบบง่าย ยึดกันได้ดี และโครงสร้างไม่ซับซ้อน แนวทาง มีลิ้น รางที่มีอัตราส่วนที่เหมาะสม ตัวอย่างสิทธิบัตรไทยที่ประกาศโฆษณาปี 2568",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_021.jpg",
+      "image_count": 12,
+      "drawing_count": 11,
+      "visual_score": 47
+    },
+    {
+      "page": 22,
+      "title": "ขั้นตอนการยื่นจดสิทธิบัตร",
+      "text": "ขั้นตอนการยื่นจดสิทธิบัตร ยื่นจด ตรวจสอบ เบื้องต้น ประกาศ โฆษณา ตรวจสอบ ความใหม่ ได้รับจด ทะเบียน หมดอายุ คัดค้าน สิทธิบัตร • ในช่วงที่ประกาศโฆษณา (Patent Publication) กรมจะเปิดเผย สิทธิบัตรที่มีการมายื่นจดสิทธิบัตรเป็นรายเดือน • ทางทีม IP จะช่วย screen สิทธิบัตร เพื่อส่งให้ทางผู้เกี่ยวข้องช่วยดู และแจ้งท าการคัดค้าน (patent opposition) • มีเวลาคัดค้านภายใน 90 วัน ส าหรับสิทธิบัตร / 1 ปี ส าหรับอนุสิทธิบัตร • หากเกินเวลาคัดค้าน และ ผู้ตรวจสอบตรวจผ่าน (แต่จริงๆอาจจะไม่ใหม่) อาจท าให้สิทธิบัตร ขัดขวางโอกาสในการท าธุรกิจ • หากจะท าการเพิกถอนหลังจากนั้น ต้องไปใช้สิทธิเพิกถอนในชั้นศาล สิทธิบัตรที่คัดค้าน Design Patent Invention Patent • การพิมพ์ดิจิตัลส าหรับโครงสร้าง รับสิ่งปูพื้น • วิธีการผลิตส าหรับโมดูลหลังคา • ระบบเชื่อมต่อที่ปลดออกส าหรับ แผงพื้น สิทธิบัตรการประดิษฐ์ เรื่องวัสดุดูซับคาร์บอนและ ชุดอุปกรณ์ จดโดย Panasonic กระทบกับธุรกิจ Air scrubber / CO2 sorbent for IAQ IP team screens all patent publication Send business-related patents to contact points Oppose patent 9,055 patents 359 patents 1 patent Jan – Aug 2025 Statistic (On process) consider to oppose 2 patents ตัวอย่างสิทธิบัตรที่ส่งให้ผู้เกี่ยวข้อง สถิติการคัดค้าน 4 8 4 5 3 1 0 2 4 6 8 10 2020 2021 2022 2023 2024 2025 จ านวนสิทธิบัตรที่คัดค้าน Rate เพิกถอน 8 สิทธิบัตร แพ้ 1 ที่เหลือรอพิจารณา ประกาศโฆษณาสิทธิบัตร และการคัดค้าน",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_022.jpg",
+      "image_count": 4,
+      "drawing_count": 26,
+      "visual_score": 24
+    },
+    {
+      "page": 23,
+      "title": "2. PROTECTING OUR",
+      "text": "2. PROTECTING OUR INNOVATION ท ามาใหม่โดน copy ซะงั้น ท าอย่างไรดี",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_023.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 24,
+      "title": "ตัวอย่าง IP ของบริษัท",
+      "text": "ตัวอย่าง IP ของบริษัท Patent Petty Patent Trade mark Copyright Vein tech Habimat Design patent Solar fix กระเบื้องโบตั๋น Active airflow Fascia 2-1 Fascia 2-1",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_024.jpg",
+      "image_count": 12,
+      "drawing_count": 1,
+      "visual_score": 37
+    },
+    {
+      "page": 25,
+      "title": "ประเภท",
+      "text": "ประเภท สิ่งที่คุ้มครอง ตัวอย่างในบริษัท การคุ้มครอง 1. สิทธิบัตร (Patent) ผลิตภัณฑ์ใหม่ กระบวนการผลิตใหม่ เครื่องจักรใหม่ ระบบผนัง ระบบบ้านประหยัดพลังงาน ลวดลายกระเบื้องใหม่ ต้องจดทะเบียนกับกรม Function 20 ปี ออกแบบ ลวดลาย 10 ปี 2. ลิขสิทธิ์(Copyright) หนังสือ ดนตรีเพลง ภาพยนตร์ รูปภาพ สื่อโฆษณา โบรชัวร์/ แคตตาล็อค / คู่มือติดตั้ง คุ้มครองอัตโนมัติ อายุ 50 หลังจากเสียชีวิต อายุ 50 ส าหรับนิติบุคคล 3. ความลับทางการค้า (Trade Secret) ข้อมูลที่มีค่าทางธุรกิจซึ่งไม่ ต้องการเผยแพร่ออกไป สูตรการผลิต ข้อมูลทางธุรกิจ มีมาตรการจัดเก็บที่เหมาะสม อายุตราบเท่าที่รักษาความลับ 4. เครื่องหมายทางการค้า (Trademark) Brand, Logo ตราบริษัท เครื่องหมายสินค้ารุ่นต่างๆ ต้องจดทะเบียนกับกรม อายุตลอดไปตราบเท่าที่จ่าย ค่าธรรมเนียมทุก 10 ปี ทรัพย์สินทางปัญญาIntellectual Property (IP) ทรัพย์สินทางปัญญา คือ ผลงานอันเกิดจากการสร้างสรรค์ การประดิษฐ์ การคิดค้น ซึ่งมีกฎหมายให้ความคุ้มครอง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_025.jpg",
+      "image_count": 0,
+      "drawing_count": 32,
+      "visual_score": 12
+    },
+    {
+      "page": 26,
+      "title": "ประโยชน์ของการคุ้มครองสิทธิบัตร",
+      "text": "ประโยชน์ของการคุ้มครองสิทธิบัตร ข้อควรรู้ในการจดสิทธิบัตร สิทธิบัตร คือ เอกสารแสดงสิทธิที่ทางราชการออกให้ เพื่อให้มีสิทธิในการผลิต ใช้ ขาย แต่เพียงผู้เดียวใน ประเทศนั้น โดยให้สิทธิระยะเวลาหนึ่ง แต่เจ้าของ สิทธิบัตรต้องเปิดเผยข้อมูลในการประดิษฐ์นั้น 1. จดที่ประเทศไหนคุ้มครองประเทศนั้นเท่านั้น (หากจะคุ้มครองในต่างประเทศต้องไปจด ในสิทธิบัตรที่ประเทศนั้นๆด้วย) 2. ห้ามเปิดเผยข้อมูลก่อนวันยื่นจด เช่น ออกสื่อ ออกงานอาสา ตีพิมพ์ผลงานทางวิชาการ 3. การจดสิทธิบัตรค่อนข้างมีค่าใช้จ่ายในการด าเนินการ โดยเฉพาะการจดสิทธิบัตรใน ต่างประเทศ 1. สร้างความได้เปรียบไม่ให้คู่แข่งท าเหมือนกับของของเรา 2. สามารถช่วยบริหารจัดการเรื่องการขายเทคโนโลยี (Technology Transfer) ได้ดียิ่งขึ้น 3. สามารถความเชื่อมั่นให้กับผู้ลงทุนในมุมมองของการ ครอบครองเทคโนโลยี โดยเฉพาะในกรณีของ Startup สิทธิบัตร (Patent)",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_026.jpg",
+      "image_count": 2,
+      "drawing_count": 6,
+      "visual_score": 12
+    },
+    {
+      "page": 27,
+      "title": "criteria",
+      "text": "criteria สิทธิบัตรการ ประดิษฐ์ (Invention Patent) อนุสิทธิบัตร (Petty patent) สิทธิบัตรออกแบบ (Design) คุ้มครอง ผลิตภัณฑ์ , กรรมวิธี ผลิตภัณฑ์ , กรรมวิธี รูปร่างลักษณะ , ลวดลาย ใหม่ ✓ ✓ ✓ ขั้นการประดิษฐ์ที่สูงขึ้น ✓ - - ประยุกต์ใช้ในอุตสาหกรรม ✓ ✓ ✓ อายุ 20 10 10 ประเภทของสิทธิบัตร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_027.jpg",
+      "image_count": 4,
+      "drawing_count": 37,
+      "visual_score": 24
+    },
+    {
+      "page": 28,
+      "title": "วันที่ยื่นจด  07/11/2522",
+      "text": "วันที่ยื่นจด 07/11/2522 วันที่รับจดทะเบียน 9/12/2524 คุ้มครองรูปร่างรูปทรงของไม้จิ้มฟัน สิทธิบัตรออกแบบ เลขที่สิทธิบัตร1 ไม้จิ้มฟัน สิทธิบัตรการประดิษฐ์ฉบับแรก กลไกประกอบพิมพ์ดีดตั้งโต๊ะพิมพ์ได้ทั้งไทย – อังกฤษ วันที่ยื่นจด 25/01/2523 วันที่รับจดทะเบียน 25 28/07/2525 เลขที่สิทธิบัตร42 คุ้มครองชิ้นส่วน เครื่องพิมพ์ดีดซึ่งพิมพ์ได้ทั้ง2ภาษาในเครื่องเดียวกัน ผลิตภัณฑ์ สิทธิบัตรฉบับแรกของประเทศไทย",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_028.jpg",
+      "image_count": 2,
+      "drawing_count": 5,
+      "visual_score": 11
+    },
+    {
+      "page": 29,
+      "title": "อนุสิทธิบัตร",
+      "text": "อนุสิทธิบัตร แผ่นกันเสียงส าเร็จรูปและวิธีติดตั้งแผ่นดังกล่าว เลขที่อนุสิทธิบัตร 22503 วันที่ยื่นค าขอ29/03/2565 คุ้มครอง ผลิตภัณฑ์ที่มีชั้น2 ชั้นที่วางเหลื่อมกัน คุ้มครอง รูปร่างรูปทรง กระเบื้องปูพื้น แผ่นปูพื้น เลขที่สิทธิบัตร 60010 วันที่ยื่นค าขอ30/10/2557 สิทธิบัตรออกแบบ ตัวอย่างสิทธิบัตรของSCG ผลิตภัณฑ์",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_029.jpg",
+      "image_count": 5,
+      "drawing_count": 5,
+      "visual_score": 20
+    },
+    {
+      "page": 30,
+      "title": "ตัวอย่างสิทธิบัตรของSCG",
+      "text": "ตัวอย่างสิทธิบัตรของSCG เลขที่สิทธิบัตร 88964 ลวดลายฝ้า วันที่ยื่นค าขอ30/10/2557 สูตรแผ่นไม้อัดซีเมนต์ที่มีส่วนผสมของโดโลไมท์ เลขที่อนุสิทธิบัตร 21297 วันที่ยื่นค าขอ 24/12/2563 คุ้มครอง สาร/ สูตรในการท าแผ่นไม้อัดซีเมนต์ คุ้มครอง กรรมวิธีการผลิต วันที่ยื่นค าขอ 24/12/2553 เลขที่อนุสิทธิบัตร 12183 กรรมวิธีการผลิตกระดาษส าหรับท าบรรจุภัณฑ์ เพื่อยืดอายุผักและผลไม้ คุ้มครอง ลวดลายฝ้า",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_030.jpg",
+      "image_count": 3,
+      "drawing_count": 3,
+      "visual_score": 12
+    },
+    {
+      "page": 31,
+      "title": "• ใบปะหน้าส าหรับการยื่นสิทธิบัตร",
+      "text": "• ใบปะหน้าส าหรับการยื่นสิทธิบัตร • รายละเอียดการประดิษฐ์ • รูปภาพ • ข้อถือสิทธิ • บทสรุป • เอกสารแนบอื่นๆ เช่น หนังสือมอบอ านาจ ใบปะหน้าส าหรับการยื่นสิทธิบัตร บอกข้อมูลต่างๆของสิทธิบัตร เช่น - ชื่อการประดิษฐ์ - ผู้ประดิษฐ์ (คนที่คิดค้นงาน) - ผู้ขอ (ผู้มีสิทธิในสิทธิบัตรตามกฎหมายอาจ เป็นผู้ประดิษฐ์ หรือบริษัทหรือมหาวิทยาลัย) - วันที่ยื่นจด (อายุสิทธิบัตรนับจาก10/20ปี นับจากวันนี้) - เลขที่ค าขอ (ส าหรับการอ้างอิงก่อนที่จะ ได้รับจดทะเบียน) องค์ประกอบสิทธิบัตร / อนุสิทธิบัตร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_031.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 32,
+      "title": "เราแก้ปัญหาอย่างไร",
+      "text": "เราแก้ปัญหาอย่างไร ส าหรับ product บรรยายว่ามีชิ้นส่วนอะไร ประกอบกันอย่างไร ท างานอย่างไร ปูเนื้อเรื่องว่าเทคโนโลยีเดิมมีอะไร (Existing Solution) แล้วของเดิมมันมีปัญหาอะไร (Pain/Problem) วัตถุประสงค์และสรุป องค์ประกอบสิทธิบัตร / อนุสิทธิบัตร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_032.jpg",
+      "image_count": 5,
+      "drawing_count": 4,
+      "visual_score": 19
+    },
+    {
+      "page": 33,
+      "title": "รูปประกอบการบรรยาย",
+      "text": "รูปประกอบการบรรยาย เป็นหัวใจของสิทธิบัตร เพราะเป็นขอบเขตการคุ้มครองทางกฎหมาย องค์ประกอบสิทธิบัตร / อนุสิทธิบัตร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_033.jpg",
+      "image_count": 2,
+      "drawing_count": 4,
+      "visual_score": 10
+    },
+    {
+      "page": 34,
+      "title": "ตัวอย่างสิทธิบัตรออกแบบ",
+      "text": "ตัวอย่างสิทธิบัตรออกแบบ",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_034.jpg",
+      "image_count": 10,
+      "drawing_count": 4,
+      "visual_score": 34
+    },
+    {
+      "page": 35,
+      "title": "ตัวอย่างสิทธิบัตรออกแบบ",
+      "text": "ตัวอย่างสิทธิบัตรออกแบบ",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_035.jpg",
+      "image_count": 8,
+      "drawing_count": 2,
+      "visual_score": 26
+    },
+    {
+      "page": 36,
+      "title": "ประเภท",
+      "text": "ประเภท สิ่งที่คุ้มครอง ตัวอย่างในบริษัท การคุ้มครอง 1. สิทธิบัตร (Patent) ผลิตภัณฑ์ใหม่ กระบวนการผลิตใหม่ เครื่องจักรใหม่ ระบบผนัง ระบบบ้านประหยัดพลังงาน ลวดลายกระเบื้องใหม่ ต้องจดทะเบียนกับกรม Function 20 ปี ออกแบบ ลวดลาย 10 ปี 2. ลิขสิทธิ์(Copyright) หนังสือ ดนตรีเพลง ภาพยนตร์ รูปภาพ สื่อโฆษณา โบรชัวร์/ แคตตาล็อค / คู่มือติดตั้ง คุ้มครองอัตโนมัติ อายุ 50 หลังจากเสียชีวิต อายุ 50 ส าหรับนิติบุคคล 3. ความลับทางการค้า (Trade Secret) ข้อมูลที่มีค่าทางธุรกิจซึ่งไม่ ต้องการเผยแพร่ออกไป สูตรการผลิต ข้อมูลทางธุรกิจ มีมาตรการจัดเก็บที่เหมาะสม อายุตราบเท่าที่รักษาความลับ 4. เครื่องหมายทางการค้า (Trademark) Brand, Logo ตราบริษัท เครื่องหมายสินค้ารุ่นต่างๆ ต้องจดทะเบียนกับกรม อายุตลอดไปตราบเท่าที่จ่าย ค่าธรรมเนียมทุก 10 ปี ทรัพย์สินทางปัญญาIntellectual Property (IP) ทรัพย์สินทางปัญญา คือ ผลงานอันเกิดจากการสร้างสรรค์ การประดิษฐ์ การคิดค้น ซึ่งมีกฎหมายให้ความคุ้มครอง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_036.jpg",
+      "image_count": 0,
+      "drawing_count": 32,
+      "visual_score": 12
+    },
+    {
+      "page": 37,
+      "title": "คุ้มครองการแสดงออกซึ่งความคิด ตามประเภทงานลิขสิทธิ์ต่างๆ เช่น รูปภาพ เพลง ภาพยนตร์",
+      "text": "คุ้มครองการแสดงออกซึ่งความคิด ตามประเภทงานลิขสิทธิ์ต่างๆ เช่น รูปภาพ เพลง ภาพยนตร์ ลิขสิทธิ์ หลัก กฎหมายลิขสิทธิ์ ละเมิดลิขสิทธิ์เมื่อ - ท าซ ้า / ดัดแปลง / เผยแพร่ต่อ สาธารณชน ในงานอันมีลิขสิทธิ์ • ไม่จ าเป็นต้องจดทะเบียน แต่อาจไปจดแจ้งกับกรมได้ • มีอายุคุ้มครอง ตลอดอายุผู้สร้างสรรค์ + 50 ปี เขียนหนังสือ วิธีการซ่อมรถ ถ่ายเอกสารไปท าเป็นหนังสือขาย เอาวิธีการไปเปิดอู่ซ่อมรถหารายได้ แบบ A แบบ B สิ่งที่ไม่เป็นลิขสิทธิ์ • ข่าวประจ าวัน และข้อเท็จจริงต่างๆ • รัฐธรรมนูญและกฎหมาย • ระเบียบ ข้อบังคับ ประกาศ ค าสั่ง ของหน่วยงานรัฐ • ค าพิพากษา ค าสั่ง ค าวินิจฉัยของราชการ • ค าแปลและการรวบรวมสิ่งต่างๆของหน่วยงานรัฐ",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_037.jpg",
+      "image_count": 2,
+      "drawing_count": 9,
+      "visual_score": 15
+    },
+    {
+      "page": 38,
+      "title": "แบบไหนละเมิดลิขสิทธิ์?",
+      "text": "แบบไหนละเมิดลิขสิทธิ์? เจ้าของลิขสิทธิ์ A B C",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_038.jpg",
+      "image_count": 4,
+      "drawing_count": 1,
+      "visual_score": 13
+    },
+    {
+      "page": 39,
+      "title": "ข้อยกเว้นการละเมิดลิขสิทธิ์ (FAIR USE)",
+      "text": "ข้อยกเว้นการละเมิดลิขสิทธิ์ (FAIR USE) ใช้เพื่อประโยชน์ ตนเองหรือครอบครัว การรายงานข่าวโดยมีการ รับรู้ถึงความเป็นเจ้าของ เพื่อการพิจารณาของศาล เพื่อการสอน ไม่ขัดต่อการแสวงหาผลประโยชน์ตามปกติของเจ้าของลิขสิทธิ์ หรือไม่กระทบกระเทือนสิทธิของเจ้าของลิขสิทธิ์เกินสมควร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_039.jpg",
+      "image_count": 0,
+      "drawing_count": 27,
+      "visual_score": 12
+    },
+    {
+      "page": 40,
+      "title": "Case Study – คดีปฏิทินผลไม้",
+      "text": "Case Study – คดีปฏิทินผลไม้ ข้อเท็จจริง นายเขียวเป็นเจ้าของรูปภาพผลไม้ อันเป็นงานมีลิขสิทธิ์ นายฟ้าว่าจ้าง นายแดง ท าปฏิทินเพื่อแจกลูกค้า นายแดง น าภาพของนายเขียว จาก internet มาท างาน นายเขียว ฟ้องทั้ง นายฟ้า และนายแดง ประเด็นที่ 2 นายฟ้าโยนให้นายแดงรับผิดคนเดียว โดยอ้างว่ามีสัญญาจ้างระหว่าง นายฟ้ากับนายแดงว่า หากนายแดงท างานโดยละเมิดผู้อื่น ต้อง รับผิดชอบค่าเสียหายแต่เพียงผู้เดียว ประเด็นที่ 1 นายแดงอ้างข้อยกเว้นว่าท าปฏิทินมาแจกไม่ได้เอาไว้ขาย (พยายามบอกว่าไม่ได้แสวงหาประโยชน์เพื่อเข้าหลัก fair use) Vecteezy.com",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_040.jpg",
+      "image_count": 1,
+      "drawing_count": 26,
+      "visual_score": 15
+    },
+    {
+      "page": 41,
+      "title": "ประเภท",
+      "text": "ประเภท สิ่งที่คุ้มครอง ตัวอย่างในบริษัท การคุ้มครอง 1. สิทธิบัตร (Patent) ผลิตภัณฑ์ใหม่ กระบวนการผลิตใหม่ เครื่องจักรใหม่ ระบบผนัง ระบบบ้านประหยัดพลังงาน ลวดลายกระเบื้องใหม่ ต้องจดทะเบียนกับกรม Function 20 ปี ออกแบบ ลวดลาย 10 ปี 2. ลิขสิทธิ์(Copyright) หนังสือ ดนตรีเพลง ภาพยนตร์ รูปภาพ สื่อโฆษณา โบรชัวร์/ แคตตาล็อค / คู่มือติดตั้ง คุ้มครองอัตโนมัติ อายุ 50 หลังจากเสียชีวิต อายุ 50 ส าหรับนิติบุคคล 3. ความลับทางการค้า (Trade Secret) ข้อมูลที่มีค่าทางธุรกิจซึ่งไม่ ต้องการเผยแพร่ออกไป สูตรการผลิต ข้อมูลทางธุรกิจ มีมาตรการจัดเก็บที่เหมาะสม อายุตราบเท่าที่รักษาความลับ 4. เครื่องหมายทางการค้า (Trademark) Brand, Logo ตราบริษัท เครื่องหมายสินค้ารุ่นต่างๆ ต้องจดทะเบียนกับกรม อายุตลอดไปตราบเท่าที่จ่าย ค่าธรรมเนียมทุก 10 ปี ทรัพย์สินทางปัญญาIntellectual Property (IP) ทรัพย์สินทางปัญญา คือ ผลงานอันเกิดจากการสร้างสรรค์ การประดิษฐ์ การคิดค้น ซึ่งมีกฎหมายให้ความคุ้มครอง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_041.jpg",
+      "image_count": 0,
+      "drawing_count": 32,
+      "visual_score": 12
+    },
+    {
+      "page": 42,
+      "title": "ความลับทางการค้า",
+      "text": "ความลับทางการค้า New Product R&D Production ย้ายออกไปอยู่บริษัทอื่น แล้วเอาสูตรไปด้วย ไปนั่งกินข้าวกับเพื่อน แล้ว ไปเล่าให้เพื่อนบริษัทอื่นฟัง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_042.jpg",
+      "image_count": 9,
+      "drawing_count": 9,
+      "visual_score": 36
+    },
+    {
+      "page": 43,
+      "title": "A",
+      "text": "A Supplier บริษัท A เสนอConcept ไปให้ supplier ท า Supplier ท า prototype มาให้ Supplier เอางานของเราไปขายให้คนอื่น ความลับทางการค้า",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_043.jpg",
+      "image_count": 4,
+      "drawing_count": 4,
+      "visual_score": 16
+    },
+    {
+      "page": 44,
+      "title": "ความลับทางการค้า",
+      "text": "ความลับทางการค้า 44 Customer ลูกค้าเอา concept และ prototype ของเรา ไปให้คู่แข่งท าเพราะราคาถูกกว่า ลูกค้าเสนอ concept สินค้าใหม่มากว้างๆ SCG SCG ไปคิดวิธีการแก้ไขปัญหาใหม่มา ให้และท า prototype ให้ด้วย",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_044.jpg",
+      "image_count": 7,
+      "drawing_count": 4,
+      "visual_score": 25
+    },
+    {
+      "page": 45,
+      "title": "คือ ข้อมูลที่ทางบริษัทต้องการเก็บไว้ใช้แต่เพียงผู้เดียว ไม่เปิดเผยต่อใคร เนื่องจากเป็นข้อมูลที่ส ำคั",
+      "text": "คือ ข้อมูลที่ทางบริษัทต้องการเก็บไว้ใช้แต่เพียงผู้เดียว ไม่เปิดเผยต่อใคร เนื่องจากเป็นข้อมูลที่ส ำคัญ และมีมูลค่ำต่อทางธุรกิจ ซึ่งหากข้อมูลนั้นรั่วไหลไปสู่คู่แข่งแล้วจะสร้างความเสียหายต่อบริษัท ความลับทางการค้า สูตรการผลิต Drawing/ blueprint รายชื่อลูกค้า/ supplier แผนธุรกิจ Parameter ที่เหมาะสมใน การผลิต ข้อมูลการวิจัย ผลิตภัณฑ์ ผลทดสอบ คุณภาพสินค้า Prototype",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_045.jpg",
+      "image_count": 0,
+      "drawing_count": 9,
+      "visual_score": 9
+    },
+    {
+      "page": 46,
+      "title": "ความลับทางการค้า",
+      "text": "ความลับทางการค้า ความลับทางการค้าที่กฎหมายให้ความคุ้มครอง 1. เป็นข้อมูลซึ่งยังไม่รู้จักกันโดยทั่วไป หรือเข้าถึงได้เฉพาะกลุ่ม 2. เป็นข้อมูลที่มีประโยชน์ในเชิงพาณิชย์ เนื่องจากการเป็นความลับ 3. มีมาตรการที่เหมาะสมเพื่อรักษาความลับ การคุ้มครอง : ไม่ต้องจดทะเบียน อายุการคุ้มครอง: ไม่จ ากัดเวลา ตลอดอายุที่ความลับนั้นไม่ถูกน ามาเปิดเผย",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_046.jpg",
+      "image_count": 2,
+      "drawing_count": 3,
+      "visual_score": 9
+    },
+    {
+      "page": 47,
+      "title": "วิธีที่กฎหมายให้ความคุ้มครองความลับทางการค้า",
+      "text": "วิธีที่กฎหมายให้ความคุ้มครองความลับทางการค้า 47 Du Pont v. Christopher Case (1970) • Christopher ถูกจ้างให้ถ่ายภาพทางอากาศที่โรงงานของ Du Pont • Christopher ใช้เครื่องบิน บินผ่านโรงงานของท Du Pont แล้วถ่ายภาพลงมา • Du Pont ฟ้องร้อง Christopher บอกว่าเป็นการน าความลับของ Du Pont ไปเปิดเผย • Christopher อ้างว่าเขาไม่ได้รุกล ้าสถานที่เพื่อไปจารกรรมข้อมูลใดๆจาก Du Pont ซึ่งแม้โรงงานของ Du Pont จะมีก าแพงล้อมด้านข้างโรงงาน แต่ก็ไม่มีก าแพงป้องกันด้านบนซึ่งใครก็เข้าถึงได้ • ศาลตัดสินว่าการกระท าของ Christopher เป็นการกระท าที่มิชอบ ในการเข้าถึงความลับของผู้อื่นแม้Du Pont จะไม่มีสิ่งปกคลุม ด้านบน แต่ Du Pont ก็มีก าแพงที่พอจะป้องกันผู้คนได้ ถือได้ว่ามี มาตรการที่เหมาะสมแล้ว",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_047.jpg",
+      "image_count": 2,
+      "drawing_count": 3,
+      "visual_score": 9
+    },
+    {
+      "page": 48,
+      "title": "Case Study",
+      "text": "Case Study - นายฟ้า เป็นนักวิจัยของบริษัท A ได้ลาออกย้ายไปอยู่บริษัท B ซึ่งเป็นคู่แข่งของบริษัท A - นายฟ้า ได้น าข้อมูลสินค้า สูตรการผลิตไปให้บริษัท B หลังจากย้ายไป - บริษัท A ฟ้องนายฟ้าว่าละเมิดความลับทางการค้า A B ศาลฎีกา ตัดสินว่า แม้บริษัท A จะมีกฎระเบียบว่าพนักงานจะต้องรักษาข้อมูลความลับไม่เปิดเผยต่อบุคคลภายนอก ตามสัญญาจ้างงาน แต่บริษัท A ไม่มีมาตรการการรักษาความลับอื่นนอกจากนี้ ก็ถือว่า บริษัท A ไม่มีมาตรการจัดเก็บความลับที่เหมาะสมตามบทกฎหมาย ดังนั้น แม้การที่นายฟ้า น าข้อมูลสินค้าและสูตรการผลิตไปให้บริษัท B ก็ไม่ถือว่าเป็นการละเมิดความลับทางการค้า",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_048.jpg",
+      "image_count": 3,
+      "drawing_count": 5,
+      "visual_score": 14
+    },
+    {
+      "page": 49,
+      "title": "4 Keys of Trade Secret Management",
+      "text": "4 Keys of Trade Secret Management 4. People 1. Document 3. Place 2. IT System",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_049.jpg",
+      "image_count": 4,
+      "drawing_count": 5,
+      "visual_score": 17
+    },
+    {
+      "page": 50,
+      "title": "Patent",
+      "text": "Patent Trade Secret Pros Prevent competitors who use or sell the same patented invention Prevent employees who steal trade secret information Cons Disclose information Cannot protect competitors who invent by themselves Term of protection 20 years As long as we can keep it secret How to protect File a patent Set up trade secret measure to maintain its secrecy Risk 1. Cannot detect competitor - Competitor will know the techniques and may use 2. Invent around - Due to narrow scope of claim, competitor can use almost the same invention without infringement 1. Not enough reasonable measure and lose secrecy - An employee may access without permission and move to a competitor’s company 2. A competitor file a patent Patent or Trade Secret",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_050.jpg",
+      "image_count": 0,
+      "drawing_count": 30,
+      "visual_score": 12
+    },
+    {
+      "page": 51,
+      "title": "Notice",
+      "text": "Notice Letter Action Informal Negotiation Business Letter Formal negotiation ไกล่เกลี่ยโดย กรมทรัพย์สินทางปัญา ฟ้องศาล ไกล่เกลี่ยโดยศาล แนวทางด าเนินการหยุดยั้งการละเมิด",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_051.jpg",
+      "image_count": 15,
+      "drawing_count": 1,
+      "visual_score": 46
+    },
+    {
+      "page": 52,
+      "title": "3. BUILDING STONGER BRAND",
+      "text": "3. BUILDING STONGER BRAND คิดชื่อดีๆที่ใช้กับลูกค้าและไม่โดน copy ง่ายๆ",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_052.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 53,
+      "title": "Slide 53",
+      "text": "",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_053.jpg",
+      "image_count": 1,
+      "drawing_count": 1,
+      "visual_score": 4
+    },
+    {
+      "page": 54,
+      "title": "เครื่องหมายการค้า",
+      "text": "เครื่องหมายการค้า ตัวอักษร รูปภาพ 3 มิติ เสียง • ข้อความ ตัวหนังสือ ตัวเลข ภาพ รูปร่าง รูปทรง กลุ่มของสี • ใช้ในการแยกแยะสินค้าหรือบริการ • ต้องจดทะเบียน - จดประเทศไหนคุ้มครองประเทศนั้น • อายุการคุ้มครอง 10 ปี ต่ออายุได้คราวละ 10 ปี • ต้องระบุประเภทในการจดทะเบียน เช่น",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_054.jpg",
+      "image_count": 12,
+      "drawing_count": 1,
+      "visual_score": 37
+    },
+    {
+      "page": 55,
+      "title": "เงื่อนไขการจดเครื่องหมายการค้า",
+      "text": "เงื่อนไขการจดเครื่องหมายการค้า",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_055.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 56,
+      "title": "ท ายังไงถึงจะมีลักษณะบ่งเฉพาะ ?",
+      "text": "ท ายังไงถึงจะมีลักษณะบ่งเฉพาะ ?",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_056.jpg",
+      "image_count": 1,
+      "drawing_count": 1,
+      "visual_score": 4
+    },
+    {
+      "page": 57,
+      "title": "ท ายังไงถึงจะมีลักษณะบ่งเฉพาะ ?",
+      "text": "ท ายังไงถึงจะมีลักษณะบ่งเฉพาะ ?",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_057.jpg",
+      "image_count": 1,
+      "drawing_count": 1,
+      "visual_score": 4
+    },
+    {
+      "page": 58,
+      "title": "Case เสือพ่นไฟ (2021)",
+      "text": "Case เสือพ่นไฟ (2021) ความคล้ายคลึงที่หมีพ่นไฟ คล้ายเสือพ่นไฟที่เห็นได้ชัด จนเกิดความเข้าใจผิดของผู้บริโภคได้คือ 1. ท าธุรกิจชานมไข่มุกเหมือนกัน และใช้ชื่อ หมีพ่นไฟ หรือชื่อ ภาษาอังกฤษ The Fire Bear เป็นชื่อร้านค้า ซึ่งเป็นชื่อที่มีความ คล้ายกับร้าน เสือพ่นไฟ ที่ใช้ภาษาอังกฤษว่า Fire Tiger 2. ท าประติมากรรมหัวหมีพ่นไฟ ที่มีลักษณะอ้าปากเพื่อเป็นช่อง ส่งชานมไข่มุกให้กับลูกค้า คล้ายกับของเสือพ่นไฟที่ท าเป็น ประติมากรรมเสืออ้าปากเป็นช่องส่งชานมไข่มุกให้กับลูกค้า เสือพ่นไฟ FIRE TIGER เปิดให้บริการตั้งแต่ปี2018 ปี 2021 มี 16 สาขา และอีก 13 สาขาทั่วโลก หมีพ่นไฟ FIRE BEAR เปิดให้บริการตั้งแต่ปี2019 ปี 2021 มี 200 กว่าสาขา",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_058.jpg",
+      "image_count": 2,
+      "drawing_count": 2,
+      "visual_score": 8
+    },
+    {
+      "page": 59,
+      "title": "ใช้เครื่องหมายอะไรก็ได้ ตราบที่ไม่ละเมิดผู้อื่น",
+      "text": "ใช้เครื่องหมายอะไรก็ได้ ตราบที่ไม่ละเมิดผู้อื่น (ไม่มีผู้อื่นจดเครื่องหมายนี้ไว้) แต่กันคนอื่นใช้ไม่ได้ (เว้นแต่เป็นกรณีลวงขาย) ไม่จดทะเบียน เครื่องหมายการค้า จดทะเบียน เครื่องหมายการค้า เงื่อนไขการได้รับจดทะเบียน 1. ไม่เหมือนที่คนอื่นจดทะเบียนไว้ก่อน 2. ไม่มีลักษณะต้องห้าม เช่น ธงชาติ ค าหยาบ 3. มีลักษณะบ่งเฉพาะ มีครบทุกข้อ จดทะเบียนได้ กันคนอื่นได้ ตามสิทธิที่จดทะเบียนไว้ มีลักษณะบ่งเฉพาะ = ไม่เล็งถึงลักษณะหรือคุณสมบัติของสินค้าโดยตรง การพิสูจน์การใช้เพื่อ ลักษณะบ่งเฉพาะ - ท าให้สาธารณชนในไทยเป็นที่รู้จัก - อย่างต่อเนื่อง - เป็นระยะเวลาตั้งแต่ 2 ปีขึ้นไป ถ้าไม่มีลักษณะบ่งเฉพาะ พิสูจน์ได้ก็จะท าให้มี ลักษณะบ่งเฉพาะ (บ่งเฉพาะโดยการใช้) Trademark Guideline",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_059.jpg",
+      "image_count": 1,
+      "drawing_count": 16,
+      "visual_score": 15
+    },
+    {
+      "page": 60,
+      "title": "การพิสูจน์การใช้เพื่อลักษณะบ่งเฉพาะ",
+      "text": "การพิสูจน์การใช้เพื่อลักษณะบ่งเฉพาะ ส่วนใหญ่ที่ได้ต้องเป็นสิ่งที่พูดค าออกมาแล้วนึกออกเลยว่าคืออะไร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_060.jpg",
+      "image_count": 5,
+      "drawing_count": 2,
+      "visual_score": 17
+    },
+    {
+      "page": 61,
+      "title": "ความเข้าใจในสิทธิที่ได้รับการคุ้มครอง",
+      "text": "ความเข้าใจในสิทธิที่ได้รับการคุ้มครอง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_061.jpg",
+      "image_count": 0,
+      "drawing_count": 1,
+      "visual_score": 1
+    },
+    {
+      "page": 62,
+      "title": "Case Study ปังชา (2566)",
+      "text": "Case Study ปังชา (2566)",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_062.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 63,
+      "title": "Case Study ปังชา (2566)",
+      "text": "Case Study ปังชา (2566)",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_063.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 64,
+      "title": "1. ยื่น Notice แจ้งว่าละเมิด",
+      "text": "1. ยื่น Notice แจ้งว่าละเมิด เครื่องหมายการค้า“ปังชา” 2. ยื่น Notice แจ้งว่าละเมิด สิทธิบัตรออกแบบ “ถ้วยไอศกรีม” 3. ถูกชาวเน็ตแจ้งว่าเอารูปภาพ (ลิขสิทธิ์) มาจากปฏิทินรีเจนซี่ Case Study ปังชา (2566)",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_064.jpg",
+      "image_count": 10,
+      "drawing_count": 4,
+      "visual_score": 34
+    },
+    {
+      "page": 65,
+      "title": "2560",
+      "text": "2560 2561 9/2565 6/2565 (1) (2) (7) 6/2565 9/2565 9/2565 (4) (8) (9) 6/2565 6/2565 (3) (5) (6) เครื่องหมายการค้าที่จดทะเบียนของ ร้านปังชา",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_065.jpg",
+      "image_count": 17,
+      "drawing_count": 12,
+      "visual_score": 63
+    },
+    {
+      "page": 66,
+      "title": "9/2565",
+      "text": "9/2565 (7) 2561 (2) เครื่องหมายการค้าที่จดทะเบียนของ ร้านปังชา",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_066.jpg",
+      "image_count": 4,
+      "drawing_count": 5,
+      "visual_score": 17
+    },
+    {
+      "page": 67,
+      "title": "2561",
+      "text": "2561 2565 ยื่นจดเครื่องหมาย ได้รับจดทะเบียน สละค าว่า The Best Thai Tea และPangcha ยื่นจดเครื่องหมาย ได้รับจดทะเบียน สละค าว่า The Best Thai Tea และPangcha 2566 มั่นใจว่าได้สิทธิค าว่า ปังชา ไม่ได้ห้ามคนอื่นขายขนมปังกับชา แต่ต้องการห้ามไม่ให้คนอื่นใช้ค าว่า ปังชา สรุป Timeline",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_067.jpg",
+      "image_count": 6,
+      "drawing_count": 4,
+      "visual_score": 22
+    },
+    {
+      "page": 68,
+      "title": "ค าถามชวนคิด",
+      "text": "ค าถามชวนคิด 2 Cases นี้มีความแตกต่างกันอย่างไร",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_068.jpg",
+      "image_count": 6,
+      "drawing_count": 1,
+      "visual_score": 19
+    },
+    {
+      "page": 69,
+      "title": "Key Takeaway – 3. Building Stronger Brand",
+      "text": "Key Takeaway – 3. Building Stronger Brand 1. เครื่องหมายที่จะคุ้มครองในกฎหมายได้ต้องมีลักษณะบ่งเฉพาะ คือ ไม่เล็งถึงสินค้า และ ไม่เล็งถึงคุณภาพ 2. ควรใช้ brand เหมือนที่จดทะเบียนไว้ 3. การจดคุ้มครองเครื่องหมายการค้าในต่างประเทศที่ท าธุรกิจหรืออาจจะท าธุรกิจในอนาคต",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_069.jpg",
+      "image_count": 1,
+      "drawing_count": 1,
+      "visual_score": 4
+    },
+    {
+      "page": 70,
+      "title": "4. MONETIZING IDEAS",
+      "text": "4. MONETIZING IDEAS THROUGH IP ต่อยอดการหาเงินจาก Idea ที่มีอยู่",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_070.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 71,
+      "title": "ผลิต+ ขายเอง ใช้ IP เป็นเครื่องมือป้องกันการ copy",
+      "text": "ผลิต+ ขายเอง ใช้ IP เป็นเครื่องมือป้องกันการ copy อนุญาตให้ใช้สิทธิ (licensing) ให้คนอื่นผลิตขาย และสร้างรายได้จาก %การขาย IP Idea 4. IP Commercialization",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_071.jpg",
+      "image_count": 3,
+      "drawing_count": 19,
+      "visual_score": 21
+    },
+    {
+      "page": 72,
+      "title": "SCG Chemicals Public Co., Ltd. (SCGC), announced a commercial cooperation agreement to license and m",
+      "text": "SCG Chemicals Public Co., Ltd. (SCGC), announced a commercial cooperation agreement to license and market “EXCENE™”, Texplore’s high density polyethylene (HDPE) technology. The licensing and marketing of EXCENE™ technology signify a boost to Lummus Technology's success by broadening its comprehensive product portfolio and production technology services. https://www.scgchemicals.com/en/articles/news/1683508859 4. IP Commercialization - SCGC licensing",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_072.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 73,
+      "title": "Key Takeaway – 4. Monetization Ideas Through IP",
+      "text": "Key Takeaway – 4. Monetization Ideas Through IP 1. IP คือ ทรัพย์สิน ซึ่ง สามารถในไปสร้างมูลค่าเพิ่มได้",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_073.jpg",
+      "image_count": 0,
+      "drawing_count": 1,
+      "visual_score": 1
+    },
+    {
+      "page": 74,
+      "title": "5. MANAGING IP RISKS",
+      "text": "5. MANAGING IP RISKS เช็คชัวร์ก่อนขาย สบายใจไม่ละเมิด",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_074.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 75,
+      "title": "ความเสี่ยงในประเด็นด้านทรัพย์สินทางปัญญา (IP)",
+      "text": "ความเสี่ยงในประเด็นด้านทรัพย์สินทางปัญญา (IP) 1. การพัฒนาสินค้าใหม่ออกมาขาย 2. การเอาสินค้าคนอื่นมาขาย 3. การใช้รูปภาพจากภายนอกเพื่อใช้ในการขายสินค้า 4. การละเมิด software",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_075.jpg",
+      "image_count": 0,
+      "drawing_count": 1,
+      "visual_score": 1
+    },
+    {
+      "page": 76,
+      "title": "All elements rule:",
+      "text": "All elements rule: สินค้าจะละเมิดสิทธิบัตร ก็ต่อเมื่อ มีองค์ประกอบครบตามที่ก าหนดไว้ในสิทธิบัตร หลักการเช็คละเมิดสิทธิบัตร A แผ่นนั่ง B ขา 4 ขา A แผ่นนั่ง B ขา 4 ขา C พนักพิง A แผ่นนั่ง B ขา 4 ขา C พนักพิง D ขาพับได้ A B A B C Claim Product 1 A แผ่นนั่ง D ขาแกนเดี่ยวฐานกลม C พนักพิง A B C A B C D Product 2 Product 3 Product 4 A แผ่นนั่ง B ขา 4 ขา C พนักพิง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_076.jpg",
+      "image_count": 5,
+      "drawing_count": 12,
+      "visual_score": 27
+    },
+    {
+      "page": 77,
+      "title": "• น าสินค้าเข้าสินค้าจากต่างประเทศมาขายในไทย",
+      "text": "• น าสินค้าเข้าสินค้าจากต่างประเทศมาขายในไทย • ในไทยมีการจดอนุสิทธิบัตรไว้ แผ่นหินเทียม แผ่นไม้เทียม ชั้นตกแต่ง Check • อนุสิทธิบัตรนั้นยัง Active อยู่หรือไม่ • ถ้าใช่ – เราตกอยู่ในขอบเขตข้อถือสิทธิหรือไม่ แผ่นไม้เทียม 2. การเอาสินค้าคนอื่นมาขาย – แผ่นไม้บันได",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_077.jpg",
+      "image_count": 4,
+      "drawing_count": 3,
+      "visual_score": 15
+    },
+    {
+      "page": 78,
+      "title": "3. การใช้รูปภาพจากภายนอกเพื่อใช้ในการขายสินค้า",
+      "text": "3. การใช้รูปภาพจากภายนอกเพื่อใช้ในการขายสินค้า • น าไปใช้ในเว็บไซต์ของของรพ และรูปประกอบในโรงพยาบาล • เรียกร้องค่าเสียหาย 300,000 บาท • แต่เจรจาประนีประนอมยอมความลดเหลือ 70,000 บาท",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_078.jpg",
+      "image_count": 4,
+      "drawing_count": 2,
+      "visual_score": 14
+    },
+    {
+      "page": 79,
+      "title": "3. การใช้รูปภาพจากภายนอกเพื่อใช้ในการขายสินค้า",
+      "text": "3. การใช้รูปภาพจากภายนอกเพื่อใช้ในการขายสินค้า",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_079.jpg",
+      "image_count": 1,
+      "drawing_count": 1,
+      "visual_score": 4
+    },
+    {
+      "page": 80,
+      "title": "4. การละเมิด software",
+      "text": "4. การละเมิด software",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_080.jpg",
+      "image_count": 1,
+      "drawing_count": 1,
+      "visual_score": 4
+    },
+    {
+      "page": 81,
+      "title": "4. การละเมิด software",
+      "text": "4. การละเมิด software สาเหตุกระท าผิดเริ่มต้น จุดที่โดนแจ้งเตือน 1. ไม่ Join Domain ตั้งใจลงโปรแกรมละเมิดลิขสิทธิ์ (Crack มา) กะว่าทดลองใช้โปรแกรมนิดหน่อย Notebook ที่ ลงโปรแกรม ละเมิดลิขสิทธิ์ ต่อ Internet จุดที่บริษัทเจ้าของ โปรแกรมตรวจพบ Log-in เข้า email SCG ในรูปแบบต่างๆ ท าให้รู้ว่าเป็นพนักงาน ใน SCG - มีเงินจ่าย - ไม่อยากเสียชื่อเสียง 3. ไป acquire บริษัทมา ซึ่งบริษัทเดิมมีการใช้โปรแกรม ที่ละเมิด 2. เอา notebook ส่วนตัวจากที่บ้านมาใช้ซึ่งมีโปรแกรม ละเมิดลิขสิทธิ์ เจ้าของโปรแกรมที่ตรวจเข้ม",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_081.jpg",
+      "image_count": 3,
+      "drawing_count": 11,
+      "visual_score": 20
+    },
+    {
+      "page": 82,
+      "title": "Key Takeaway – 5. Managing IP Risks",
+      "text": "Key Takeaway – 5. Managing IP Risks 1. การออกสินค้าใหม่ หรือ เอาสินค้าใหม่มาขาย ควรเช็คว่าละเมิดสิทธิบัตรผู้อื่น 2. การพัฒนาสินค้าใหม่แล้วจดสิทธิบัตรได้ ไม่ได้หมายความว่า จะไม่ละเมิดสิทธิบัตรผู้อื่น(ใหม่ ≠ไม่ละเมิด) 3. การเอารูปภาพของคนอื่นมาใช้ ควรระวังการละเมิดลิขสิทธิ์ 4. ระวังการใช้ software ที่ผิดลิขสิทธิ์",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_082.jpg",
+      "image_count": 0,
+      "drawing_count": 1,
+      "visual_score": 1
+    },
+    {
+      "page": 83,
+      "title": "6. IP CAUTION IN",
+      "text": "6. IP CAUTION IN EXTERNAL COLLABORATION อยากร่วมมือกับคนข้างนอกมีประเด็น IP อะไร ที่ต้องระวัง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_083.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 84,
+      "title": "Idea",
+      "text": "Idea Find Partner Scope R&D Test Launch NDA concept ธุรกิจ จ้างวิจัย ร่วมวิจัย จ้างท า Prototype / NDA ให้ข้อมูล MOU MOU Idea Find Partner Prove Concept Launch 1. หาพันธมิตร จ้างวิจัย / ร่วมวิจัย 2. หาพันธมิตรที่มีเทคโนโลยี อยู่แล้วมาใช้ในไทย NDA รับข้อมูล NDA รับข้อมูล มหาวิทยาลัย มหาวิทยาลัย บริษัท บริษัท Commercial Commercial จ้างวิจัย ร่วมวิจัย ตัวอย่างสัญญาที่อาจเกิดขึ้นในช่วงการท าวิจัย",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_084.jpg",
+      "image_count": 0,
+      "drawing_count": 22,
+      "visual_score": 12
+    },
+    {
+      "page": 85,
+      "title": "1.1 จ้างวิจัย",
+      "text": "1.1 จ้างวิจัย (บอกขอบเขตและความรับผิดชอบอย่างชัดเจน) ลักษณะของความร่วมมือ สิทธิ IP • ควรระบุให้สิทธิ IP เป็นของSCG • สิทธิในการตีพิมพ์(optional ของมหาวิทยาลัย) - ควรให้ SCG review - ไม่เปิดเผยความลับของ SCG - เผยแพร่หลัง SCG จดสิทธิบัตร Issue อื่นๆ • สัญญาท ากับใคร (มหาลัย / startup ในมหาวิทยาลัย /อาจารย์) • สัญญาท ากับใคร (บริษัทแม่ บริษัทในเครือ) 1.2 ร่วมวิจัย (บอกขอบเขตและความรับผิดชอบอย่างชัดเจน) • ควรเข้าใจและคาดการณ์ว่าน่าจะมี IP อะไรเกิดขึ้น • MOU อาจเป็นภาพกว้าง และ อาจท าสัญญาย่อยใน แต่ละ Project ก็ได้ • ระวัง การขอทุนของอาจารย์เพิ่มเติม เพราะ อาจจะ เกี่ยวข้องกับสิทธิของ IP ในองค์กรอื่น • ในมหาวิทยาลัยมีหน่วยงาน IP / TLO (Technology Licensing Office) ซึ่งอาจเข้ามาในการประชุม ภายหลังซึ่งจะเคี่ยวเรื่องการร่วมวิจัยและอาจตกลง ผลประโยชน์แตกต่างจากที่คุยกับอาจารย์ตอนแรก • ถ้าเป็นสิทธิร่วมกัน ควรเข้าใจในความเป็นเจ้าของ สิทธิร่วมกันใน IP - ใช้สิทธิจาก IP กันอย่างไร (ส่วนใหญ่จะจ่ายค่าใช้ สิทธิให้มหาลัย X% แล้ว SCG ไปขาย) - ค่าใช้จ่ายที่เกิดขึ้นใน IP - สิทธิในการคุ้มครองต่างประเทศ - สิทธิในการด าเนินคดี • อาจพิจารณาว่าแยกสิทธิเป็นส่วนได้หรือไม่ • ไม่ได้มีผลผูกพันที่ชัดเจน MOU จ้างวิจัย / ร่วมวิจัย",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_085.jpg",
+      "image_count": 0,
+      "drawing_count": 8,
+      "visual_score": 8
+    },
+    {
+      "page": 86,
+      "title": "Key Takeaway – 6. IP Caution in External Collaboration",
+      "text": "Key Takeaway – 6. IP Caution in External Collaboration 1. การรับและการให้ข้อมูล ควรพิจารณาท า NDA และพิจารณาการรักษาข้อมูล 2. เจ้าของสิทธิใน IP ที่เกิดจากการร่วมมือ",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_086.jpg",
+      "image_count": 0,
+      "drawing_count": 1,
+      "visual_score": 1
+    },
+    {
+      "page": 87,
+      "title": "7. IP ISSUES IN AI ERA",
+      "text": "7. IP ISSUES IN AI ERA ท าเรื่องเกี่ยวกับ AI มีอะไรเกี่ยวกับ IP ไหม",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_087.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 88,
+      "title": "AI Process Overview",
+      "text": "AI Process Overview INPUT PROCESS OUTPUT Data Picture IP Issue # 3 รูปที่สร้างขึ้น มีลิขสิทธิ์หรือไม่ IP Issue # 2 เอาข้อมูลมา train สร้าง model เป็นการ ละเมิดลิขสิทธิ์หรือไม่ IP Issue # 1 เอาข้อมูลมาใส่เพื่อ ประมวลผล ระวังเรื่อง ความลับรั่วไหล",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_088.jpg",
+      "image_count": 5,
+      "drawing_count": 8,
+      "visual_score": 23
+    },
+    {
+      "page": 89,
+      "title": "In 2023",
+      "text": "In 2023 1. One Samsung employee entered faulty source code related to the Samsung Electronics facility measurement database download program to find a solution 2. Another employee entered program code for identifying defective equipment to get code optimization. 3. The third employee converted a smartphone recording of a company meeting to a document file and entered it into ChatGPT to get meeting minutes, according to the report. https://www.ciodive.com/news/Samsung-Electronics-ChatGPT-leak-data-privacy/647137/ เอาข้อมูลมาใส่เพื่อประมวลผล ระวังเรื่องความลับรั่วไหล IP Issue # 1",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_089.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 90,
+      "title": "เอาข้อมูลมาใส่เพื่อประมวลผล ระวังเรื่องความลับรั่วไหล",
+      "text": "เอาข้อมูลมาใส่เพื่อประมวลผล ระวังเรื่องความลับรั่วไหล IP Issue # 1 ที่มา แนวทางการใช้ GENERATIVE AI ส าหรับ พนักงาน SCG HTTPS://DRIVE.GOOGLE.COM/FILE/D/1HFV5YRUG234-1I3-VJLUDKXPAUQSXW1F/VIEW DO DON’T แนะน าสูตรใหม่ที่ตรงใจกับผู้บริโภค หลีกเลี่ยงการน าสูตรผลิตของเราไปให้ ChatGPT (ถ้าจะท าให้ท าภายใต้ AI system ที่สร้างขึ้นใน SCG) แนะน าสัญญามาตรฐานในเรื่องที่เราสนใจ เพื่อเป็นใช้เป็น idea ในการเป็น issue ไปใช้ในการเจรจาเบื้องต้น หลีกเลี่ยงการน าเนื้อหาในสัญญาไป post เพื่อให้ ChatGPT วิเคราะห์และ ปรับปรุงแก้ไขเนื้อหา แนะน าแผนกลยุทธ์ทางธุรกิจหรือแผนการตลาดที่น่าสนใจ หลีกเลี่ยงการน าแผนของบริษัทไปประมวลผลใน ChatGPT",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_090.jpg",
+      "image_count": 1,
+      "drawing_count": 17,
+      "visual_score": 15
+    },
+    {
+      "page": 91,
+      "title": "IP Issue # 2 เอาข้อมูลมา train Model ละเมิดลิขสิทธิ์หรือไม่",
+      "text": "IP Issue # 2 เอาข้อมูลมา train Model ละเมิดลิขสิทธิ์หรือไม่ หลัก กฎหมายลิขสิทธิ์ ละเมิดลิขสิทธิ์เมื่อ - ท าซ ้า / ดัดแปลง / เผยแพร่ต่อสาธารณชน ในงานอันมีลิขสิทธิ์ ข้อยกเว้นของการละเมิดลิขสิทธิ์ - หลัก Fair Use (มีบรรทัดฐานแตกต่างกันแต่ละประเทศ) เช่น ใช้เพื่อส่วนตัว ใช้เพื่อการเรียนการสอน เพื่อการน าเสนอข่าว",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_091.jpg",
+      "image_count": 2,
+      "drawing_count": 5,
+      "visual_score": 11
+    },
+    {
+      "page": 92,
+      "title": "Case Thomson Reuters v. Ross Intelligence (2025)",
+      "text": "Case Thomson Reuters v. Ross Intelligence (2025) https://www.reedsmith.com/en/perspectives/2025/03/court-ai-fair-use-thomson-reuters-enterprise-gmbh-ross-intelligence Ross Intelligence (AI Legal Startup) - Copy headnote and key number from Westlaw to train AI Court Ruled - Head notes and key number system are copyright - Not fair use - Direct competition - Substantial amount – use at least 2,243 headnotes หมายเหตุค าพิพากษาศาล กับ ข้อเท็จจริง ไม่มีลิขสิทธิ์ WestLaw – court decision search database with features : headnotes and key number IP Issue # 2 เอาข้อมูลมา train Model ละเมิดลิขสิทธิ์หรือไม่",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_092.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 93,
+      "title": "IP Issue # 2 เอาข้อมูลมา train Model ละเมิดลิขสิทธิ์หรือไม่",
+      "text": "IP Issue # 2 เอาข้อมูลมา train Model ละเมิดลิขสิทธิ์หรือไม่ Antropic - Claude (2025) • Authors accused Anthropic of using their copyrighted books without permission to train the AI models that power Claude. • Judge had ruled earlier that the act of using copyrighted books for AI training was a \"fair use“ • training an AI model on lawfully acquired books constituted \"fair use\" because it was a \"transformative\" process akin to human learning. • However, he ruled that downloading and storing pirated versions of books from shadow libraries was illegal and not covered by fair use, leaving Anthropic liable for those actions.",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_093.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 94,
+      "title": "IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่",
+      "text": "IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่ คนธรรมดา / นิติบุคคล",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_094.jpg",
+      "image_count": 4,
+      "drawing_count": 4,
+      "visual_score": 16
+    },
+    {
+      "page": 95,
+      "title": "Zarya of the Dawn: US Copyright Office Affirms Limits on Copyright of AI Outputs (2023)",
+      "text": "Zarya of the Dawn: US Copyright Office Affirms Limits on Copyright of AI Outputs (2023) IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_095.jpg",
+      "image_count": 4,
+      "drawing_count": 1,
+      "visual_score": 13
+    },
+    {
+      "page": 96,
+      "title": "IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่",
+      "text": "IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่ Thaler, Copyright Office Fight Over Human-Authorship Requirement for AI-Created Artwork Continues (2024)",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_096.jpg",
+      "image_count": 3,
+      "drawing_count": 1,
+      "visual_score": 10
+    },
+    {
+      "page": 97,
+      "title": "Beijing Internet Court Grants Copyright to AI-Generated Image for the First Time (2024)",
+      "text": "Beijing Internet Court Grants Copyright to AI-Generated Image for the First Time (2024) IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_097.jpg",
+      "image_count": 2,
+      "drawing_count": 1,
+      "visual_score": 7
+    },
+    {
+      "page": 98,
+      "title": "IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่",
+      "text": "IP Issue # 3 รูปภาพ ที่สร้างขึ้นโดย Gen-AI มีลิขสิทธิ์หรือไม่ https://www.facebook.com/ipthailand/posts/pfbid071DHr8oo5eLqutnpk53VCK hPRc6jam7u4ZSCc4VAqc7CrrrNWGjM3w7H2A6Q3QM5l เฟซบุ๊กกรมทรัพย์สินทางปัญญากระทรวงพาณิชย์ โพสต์ บทความหัวข้อ ลิขสิทธิ์ที่เกิดจากการสร้างสรรค์ของ AI ซึ่งก าหนดว่างานที่ สร้างสรรค์โดย AI \"ไม่สามารถจดแจ้งลิขสิทธิ์ได้\" และหากงานลิขสิทธิ์ใดมีการสร้างสรรค์ร่วมกันทั้งโดยมนุษย์และ AI ก็จะต้องระบุให้ชัดเจนตอนยื่นขอจดแจ้งลิขสิทธิ์ด้วย",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_098.jpg",
+      "image_count": 1,
+      "drawing_count": 2,
+      "visual_score": 5
+    },
+    {
+      "page": 99,
+      "title": "Key Takeaway – 7. IP Issues in AI Era",
+      "text": "Key Takeaway – 7. IP Issues in AI Era 1. ระวังการใส่ข้อมูลที่เป็นความลับของบริษัทใน AI platform 2. งานที่สร้างขึ้นด้วย AI ไม่ได้รับความคุ้มครองด้านลิขสิทธิ์เพราะไม่ได้เป็นการสร้างสรรค์จากมนุษย์ – ให้ใช้ AI ให้เหมือนเป็นเครื่องมือในการช่วยขีด เขียน ปรับแต่ง",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_099.jpg",
+      "image_count": 0,
+      "drawing_count": 1,
+      "visual_score": 1
+    },
+    {
+      "page": 100,
+      "title": "สรุปของสรุป",
+      "text": "สรุปของสรุป Business Opportunity Identification Design and Discovery Synthesis and Testing Optimization Certify Pilot Scale - Up Deployment and Commercialize IP Protection Patent Copyright Trademark Trade Secret IP Creation • IP Intelligence • Risk + Freedom to Operate (FTO) IP Utilization • Enforcement • Licensing • Opposition (Collaboration) • Agreement • IP Ownership",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_100.jpg",
+      "image_count": 26,
+      "drawing_count": 6,
+      "visual_score": 84
+    },
+    {
+      "page": 101,
+      "title": "Q & A",
+      "text": "Q & A",
+      "thumbnail": "/pdf-review/files/pdf_124c9907/pages/page_101.jpg",
+      "image_count": 0,
+      "drawing_count": 2,
+      "visual_score": 2
+    }
+  ],
+  "status": "source_extracted",
+  "video_generation_enabled": false
+}

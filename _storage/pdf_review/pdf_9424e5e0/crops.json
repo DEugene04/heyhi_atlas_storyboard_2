@@ -1,0 +1,86 @@
+[
+  {
+    "page": 1,
+    "x": 0.08,
+    "y": 0.1,
+    "width": 0.84,
+    "height": 0.62,
+    "label": "Title and central subtitle area",
+    "crop_path": "crops/slide_001.png",
+    "url": "/pdf-review/files/pdf_9424e5e0/crops/slide_001.png",
+    "pixel_width": 1614,
+    "pixel_height": 670
+  },
+  {
+    "page": 2,
+    "x": 0.065,
+    "y": 0.035,
+    "width": 0.72,
+    "height": 0.46,
+    "label": "Objective bullets",
+    "crop_path": "crops/slide_002.png",
+    "url": "/pdf-review/files/pdf_9424e5e0/crops/slide_002.png",
+    "pixel_width": 1384,
+    "pixel_height": 498
+  },
+  {
+    "page": 12,
+    "x": 0.057,
+    "y": 0.124,
+    "width": 0.928,
+    "height": 0.798,
+    "label": "Main table content",
+    "crop_path": "crops/slide_012.png",
+    "url": "/pdf-review/files/pdf_9424e5e0/crops/slide_012.png",
+    "pixel_width": 1783,
+    "pixel_height": 863
+  },
+  {
+    "page": 18,
+    "x": 0.507,
+    "y": 0.082,
+    "width": 0.411,
+    "height": 0.869,
+    "label": "right-side charts panel",
+    "crop_path": "crops/slide_018.png",
+    "url": "/pdf-review/files/pdf_9424e5e0/crops/slide_018.png",
+    "pixel_width": 790,
+    "pixel_height": 940
+  },
+  {
+    "page": 23,
+    "x": 0.0,
+    "y": 0.08,
+    "width": 1.0,
+    "height": 0.84,
+    "label": "Title slide with subtitle and icons",
+    "crop_path": "crops/slide_023.png",
+    "url": "/pdf-review/files/pdf_9424e5e0/crops/slide_023.png",
+    "pixel_width": 1920,
+    "pixel_height": 908
+  },
+  {
+    "page": 54,
+    "x": 0.11,
+    "y": 0.38,
+    "width": 0.83,
+    "height": 0.5,
+    "label": "logos and visual examples section",
+    "crop_path": "crops/slide_054.png",
+    "url": "/pdf-review/files/pdf_9424e5e0/crops/slide_054.png",
+    "pixel_width": 1594,
+    "pixel_height": 541
+  },
+  {
+    "page": 75,
+    "x": 0.034,
+    "y": 0.053,
+    "width": 0.615,
+    "height": 0.432,
+    "label": "Thai text list",
+    "crop_path": "crops/slide_075.png",
+    "url": "/pdf-review/files/pdf_9424e5e0/crops/slide_075.png",
+    "pixel_width": 1182,
+    "pixel_height": 467
+  }
+]

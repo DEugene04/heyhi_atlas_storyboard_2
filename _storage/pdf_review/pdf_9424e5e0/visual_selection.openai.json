@@ -1,0 +1,64 @@
+{
+  "choices": [
+    {
+      "page": 1,
+      "scene_ids": [
+        "scene_01"
+      ],
+      "label": "Turning Ideas into Competitive Advantage Powered by IP",
+      "rationale": "Best match for the opening title and the narration about turning ideas into competitive advantage through IP."
+    },
+    {
+      "page": 2,
+      "scene_ids": [
+        "scene_02"
+      ],
+      "label": "Learning objectives",
+      "rationale": "Directly lists the lesson objectives referenced in the narration."
+    },
+    {
+      "page": 12,
+      "scene_ids": [
+        "scene_03"
+      ],
+      "label": "Types of IP table",
+      "rationale": "Clear comparison table for Patent, Copyright, Trade Secret, and Trademark, exactly matching the scene."
+    },
+    {
+      "page": 18,
+      "scene_ids": [
+        "scene_04"
+      ],
+      "label": "Patent information enables patent mapping",
+      "rationale": "Strong visual support for reading patent data, tracking trends, and patent mapping for R&D opportunity identification."
+    },
+    {
+      "page": 23,
+      "scene_ids": [
+        "scene_05"
+      ],
+      "label": "Protecting Our Innovation",
+      "rationale": "Matches the narration's transition to protecting innovation before moving to brand protection."
+    },
+    {
+      "page": 54,
+      "scene_ids": [
+        "scene_05"
+      ],
+      "label": "Trademark overview",
+      "rationale": "Supports the trademark-specific explanation about distinguishing goods/services and registration requirements."
+    },
+    {
+      "page": 75,
+      "scene_ids": [
+        "scene_06"
+      ],
+      "label": "IP risks overview",
+      "rationale": "Directly shows the risk list mentioned in the narration, and pairs well with the key takeaway slide in the same section."
+    }
+  ],
+  "summary": "Selected 10 slide references but only 8 unique pages? No—unique pages are 8, which exceeds the 7-slide limit. Trimmed selection to the most essential 7 unique slides below.",
+  "candidate_count": 101,
+  "calls": 1,
+  "model": "gpt-5.4-mini"
+}

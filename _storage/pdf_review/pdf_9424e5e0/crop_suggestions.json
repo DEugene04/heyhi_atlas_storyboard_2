@@ -1,0 +1,65 @@
+[
+  {
+    "x": 0.08,
+    "y": 0.1,
+    "width": 0.84,
+    "height": 0.62,
+    "label": "Title and central subtitle area",
+    "rationale": "Crops the main slide message and supporting banner while excluding most empty whitespace and avoiding the slide edges; includes the key visual icon and all essential text for a training display.",
+    "page": 1
+  },
+  {
+    "x": 0.065,
+    "y": 0.035,
+    "width": 0.72,
+    "height": 0.46,
+    "label": "Objective bullets",
+    "rationale": "The slide is mostly text with the title and four objective bullets; this crop captures the essential content while excluding most of the empty lower area and avoiding unnecessary slide margins.",
+    "page": 2
+  },
+  {
+    "x": 0.057,
+    "y": 0.124,
+    "width": 0.928,
+    "height": 0.798,
+    "label": "Main table content",
+    "rationale": "The slide is dominated by a single instructional table with key labels and entries; cropping the full table preserves the essential visual information while excluding most of the title area and margins.",
+    "page": 12
+  },
+  {
+    "x": 0.507,
+    "y": 0.082,
+    "width": 0.411,
+    "height": 0.869,
+    "label": "right-side charts panel",
+    "rationale": "This region contains the most useful standalone visuals for a training video: the patent filing trend chart, technology labels, and company ranking summaries. It excludes the large slide title and most explanatory text on the left while preserving essential chart captions and legends.",
+    "page": 18
+  },
+  {
+    "x": 0.0,
+    "y": 0.08,
+    "width": 1.0,
+    "height": 0.84,
+    "label": "Title slide with subtitle and icons",
+    "rationale": "The main visual content is the centered title, subtitle, and top icons; there is no standalone chart or inset to crop more tightly, so keeping nearly the full slide best preserves the useful training-video context while avoiding excess empty margin.",
+    "page": 23
+  },
+  {
+    "x": 0.11,
+    "y": 0.38,
+    "width": 0.83,
+    "height": 0.5,
+    "label": "logos and visual examples section",
+    "rationale": "This crop captures the main instructional visuals and labels on the slide: the category headings and the grouped example images/logos (text, image, 3D, sound). It excludes most of the top header/bullets while keeping the essential content for a training display.",
+    "page": 54
+  },
+  {
+    "x": 0.034,
+    "y": 0.053,
+    "width": 0.615,
+    "height": 0.432,
+    "label": "Thai text list",
+    "rationale": "The slide is mostly plain text with no separate chart or image; this crop captures the title and all four listed points while excluding most empty whitespace and avoiding unnecessary footer area.",
+    "page": 75
+  }
+]

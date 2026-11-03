@@ -108,10 +108,12 @@ What's in it, and why:
 | `pydantic>=2.7`                  | v2 only (`model_validate`, `model_dump`, `ConfigDict`)                                                                                                                                                                                                                               |
 | `python-dotenv`                  | `app/config.py` loads `.env` at import                                                                                                                                                                                                                                               |
 | `google-genai`                   | director, Gemini image, Veo, Lyria **and** diarization                                                                                                                                                                                                                               |
+| `openai`                         | PDF review script synthesis, visual-slide selection, and vision-based crop-coordinate suggestions                                                                                                                                                                                     |
 | `elevenlabs`                     | speech-to-speech + the paginated voice list                                                                                                                                                                                                                                          |
 | `azure-cognitiveservices-speech` | only for `tts_provider="azure"`                                                                                                                                                                                                                                                      |
-| `requests`                       | only for `video_provider="kieai"`                                                                                                                                                                                                                                                    |
+| `requests`                       | Kie video requests and downloading S3/CloudFront PDFs for review                                                                                                                                                                                                                      |
 | `Pillow`                         | `boxed` subtitles and cartoon-title glyph metrics                                                                                                                                                                                                                                    |
+| `PyMuPDF`                        | PDF text extraction, slide rendering, and local source-image cropping                                                                                                                                                                                                                 |
 | `faster-whisper`                 | **optional.** Only for `diarizer="whisper"` and `bench/diarize_local.py`. Commented out in `requirements.txt`: the import is inside `diarize()`, so the pipeline runs fine without it, and installing it pulls in ctranslate2 + av + onnxruntime and downloads a model on first use. |
 
 ### Running the tests
@@ -141,8 +143,8 @@ renderer, and every client — see
 - **`moviepy`** — was imported only by `app/eleven_labs.py`, which was dead code
   and has been deleted ([#10](open-questions.md#10-fixed--appeleven_labspy-was-dead-code)).
   The pipeline drives ffmpeg directly through `app/utils/ffmpeg_utils.py`.
-- **`boto3`** and the OpenAI/DeepSeek SDKs — `.env` carries keys for all three;
-  nothing in `new_code_v2` reads them. Storage is always local
+- **`boto3`** and the DeepSeek SDK — legacy `.env` entries exist, but the
+  application does not read them. Storage is always local
   ([#26](open-questions.md#26-on-hold--env-carries-keys-nothing-reads)).
 
 `ffmpeg` and `ffprobe` are not pip packages — see §1.
@@ -183,6 +185,9 @@ HEYHI_AZURE_SPEECH_REGION=
 
 # Required only for video_provider=kieai (testing)
 KIE_API_KEY=
+
+# Required only for PDF review script, visual selection, and AI crop suggestions
+OPENAI_API_KEY=
 ```
 
 `load_dotenv()` runs when `app.config` is imported, so the API picks these up
@@ -202,12 +207,13 @@ not as a crash at boot — clients are built lazily behind seams for that reason
 | `ATLAS_VEO_BACKOFF`     | 2.0                                   | Veo retry backoff (s)       |
 | `ATLAS_VEO_POLL_S`      | 10.0                                  | Veo poll interval (s)       |
 | `ATLAS_LYRIA_BACKOFF`   | 2.0                                   | Lyria retry backoff (s)     |
+| `OPENAI_PDF_MODEL`      | `gpt-5.4-mini`                        | PDF review AI model         |
 
-The `.env` in the repo also carries `HEYHI_OPENAI_API_KEY`,
-`HEYHI_DEEPSEEK_API_KEY`, the S3 group and `HEYHI_DIRECTOR_PROVIDER` /
-`HEYHI_DIRECTOR_MODEL`. **None of these are read by any code in
-`new_code_v2`** — they're leftovers from earlier iterations. Storage is always
-local; there is no S3 path implemented.
+The legacy `HEYHI_OPENAI_API_KEY` name is still unused. The PDF review workflow
+uses the standard `OPENAI_API_KEY` name instead. `HEYHI_DEEPSEEK_API_KEY`, the
+credential-based S3 group and `HEYHI_DIRECTOR_PROVIDER` /
+`HEYHI_DIRECTOR_MODEL` also remain unused. PDF review can download a public or
+presigned S3 URL, but all run artifacts are still stored locally.
 
 ### Working directory matters
 

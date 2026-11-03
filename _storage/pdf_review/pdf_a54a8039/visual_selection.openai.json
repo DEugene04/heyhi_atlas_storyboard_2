@@ -1,0 +1,72 @@
+{
+  "choices": [
+    {
+      "page": 1,
+      "scene_ids": [
+        "scene_01"
+      ],
+      "label": "Opening title slide",
+      "rationale": "Directly matches the title narration about turning ideas into competitive advantage and understanding IP; good for pointing at the main title text."
+    },
+    {
+      "page": 2,
+      "scene_ids": [
+        "scene_02"
+      ],
+      "label": "Learning objectives",
+      "rationale": "Contains the exact learning-goal bullets about IP types, risk assessment, protection opportunities, and IP’s relation to R&D and business objectives."
+    },
+    {
+      "page": 12,
+      "scene_ids": [
+        "scene_03"
+      ],
+      "label": "IP types comparison table",
+      "rationale": "Best support for the four main IP categories and the columns covering what each protects and how it is protected."
+    },
+    {
+      "page": 16,
+      "scene_ids": [
+        "scene_04"
+      ],
+      "label": "Why patent information is interesting",
+      "rationale": "Supports the explanation that patents disclose inventions and can be studied for trends, problems, solutions, and new ideas; includes patent-document examples."
+    },
+    {
+      "page": 26,
+      "scene_ids": [
+        "scene_05"
+      ],
+      "label": "Patent protection benefits and cautions",
+      "rationale": "Matches the narration on competitive advantage, deterring copying, technology transfer, territorial coverage, and not disclosing before filing."
+    },
+    {
+      "page": 54,
+      "scene_ids": [
+        "scene_06"
+      ],
+      "label": "Trademark forms and distinctiveness",
+      "rationale": "Shows trademark forms such as words, images, 3D shapes, and sounds, plus the registration and distinctiveness points needed for this scene."
+    },
+    {
+      "page": 76,
+      "scene_ids": [
+        "scene_07"
+      ],
+      "label": "IP risk management and all elements rule",
+      "rationale": "Contains the main risk list and the all-elements-rule diagram, which directly support the risk-checking narration."
+    },
+    {
+      "page": 88,
+      "scene_ids": [
+        "scene_08"
+      ],
+      "label": "AI process overview",
+      "rationale": "Best visual for the three AI/IP issues: confidential data input, training data, and copyright in AI outputs; directly supports the key takeaway."
+    }
+  ],
+  "summary": "Selected 8 unique slides, one for each scene, prioritizing the most visually and conceptually relevant source slides.",
+  "candidate_count": 101,
+  "calls": 1,
+  "model": "gpt-5.4-mini"
+}

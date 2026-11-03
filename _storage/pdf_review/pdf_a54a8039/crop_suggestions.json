@@ -1,0 +1,74 @@
+[
+  {
+    "x": 0.12,
+    "y": 0.11,
+    "width": 0.79,
+    "height": 0.63,
+    "label": "main title and subtitle area",
+    "rationale": "This region contains the full presentation title, subtitle, and the lightbulb graphic, which are the most useful standalone visual elements for a training video. It excludes most empty margins and avoids the slide footer area while preserving the key caption bar.",
+    "page": 1
+  },
+  {
+    "x": 0.0,
+    "y": 0.0,
+    "width": 1.0,
+    "height": 1.0,
+    "label": "full slide",
+    "rationale": "The slide is a text-only objective slide with no standalone visual region to crop safely. Using the full slide preserves the title and all bullet points, which are the essential content.",
+    "page": 2
+  },
+  {
+    "x": 0.053,
+    "y": 0.124,
+    "width": 0.945,
+    "height": 0.776,
+    "label": "main table content",
+    "rationale": "Crops out the slide header whitespace while keeping the full table with all key labels and entries, which is the most useful visual region for training display.",
+    "page": 12
+  },
+  {
+    "x": 0.07,
+    "y": 0.22,
+    "width": 0.88,
+    "height": 0.73,
+    "label": "main content table and explanatory boxes",
+    "rationale": "The table and surrounding explanation boxes contain the core comparison and essential labels for the training video, while the slide title/header is less useful. This crop keeps the full structured visual content and avoids unnecessary margins.",
+    "page": 16
+  },
+  {
+    "x": 0.02,
+    "y": 0.05,
+    "width": 0.96,
+    "height": 0.88,
+    "label": "full slide content",
+    "rationale": "The slide is a single instructional layout with multiple text blocks and two small visuals; no standalone chart or image dominates enough to crop safely without losing essential context, so using nearly the full slide preserves the title, explanatory text, and the illustrative patent images.",
+    "page": 26
+  },
+  {
+    "x": 0.05,
+    "y": 0.18,
+    "width": 0.9,
+    "height": 0.74,
+    "label": "Main slide content with examples and labels",
+    "rationale": "This crop keeps the central educational content: the title area, bullet points, and the four labeled example categories with logos/images. It excludes most of the empty margins while preserving the essential visual material for a training display.",
+    "page": 54
+  },
+  {
+    "x": 0.27,
+    "y": 0.11,
+    "width": 0.73,
+    "height": 0.81,
+    "label": "comparison grid of products",
+    "rationale": "This crop captures the main visual content: the four product panels with their images and labels, which are the most useful region for a training video display. It excludes the left-side claim area and minimizes the slide title/header while keeping the essential captions and annotations.",
+    "page": 76
+  },
+  {
+    "x": 0.0,
+    "y": 0.12,
+    "width": 1.0,
+    "height": 0.82,
+    "label": "main process diagram",
+    "rationale": "Crops the full central diagram with the INPUT-PROCESS-OUTPUT flow, icons, arrows, and issue labels while minimizing the slide header at the very top.",
+    "page": 88
+  }
+]

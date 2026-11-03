@@ -27,12 +27,14 @@ python-dotenv>=1.0
 
 # --- providers -------------------------------------------------------------
 google-genai>=1.0            # director, Gemini image, Veo, Lyria, diarization
+openai>=2.0                  # PDF review: script, visual selection, crop analysis
 elevenlabs>=1.0              # speech-to-speech + paginated voice list
 azure-cognitiveservices-speech>=1.37   # only needed for tts_provider="azure"
 requests>=2.31               # kie.ai client only (video_provider="kieai")
 
 # --- media -----------------------------------------------------------------
 Pillow>=10.0                 # boxed subtitles + cartoon title glyph metrics
+PyMuPDF>=1.24,<2.0           # PDF review: 2.0 auto-loads an unrelated layout model
 
 # ffmpeg and ffprobe are NOT pip packages. Install them separately and make sure
 # both are on PATH:
@@ -51,7 +53,7 @@ Pillow>=10.0                 # boxed subtitles + cartoon title glyph metrics
 
 # --- deliberately absent ---------------------------------------------------
 # boto3 — .env carries S3 keys but no code reads them. Storage is always local.
-# openai / deepseek SDKs — .env carries keys, nothing in new_code_v2 uses them.
+# DeepSeek SDK — a legacy .env entry exists, but the application does not use it.
 
 # --- version-sensitive surfaces (flagged in code comments) -----------------
 # google-genai:

@@ -55,6 +55,26 @@ in a conda environment) documented in
 
 `http://localhost:8000/docs` for the interactive API.
 
+### PDF review prototype
+
+Open `http://localhost:8000/pdf-review/` for the review-first PDF workflow. It
+accepts a public or presigned S3/CloudFront URL (and a local PDF during
+development), renders and extracts the slides, then guides a reviewer through:
+
+1. source-slide selection;
+2. a free local draft or one explicit OpenAI script call;
+3. scene timing and presenter direction;
+4. one OpenAI call to shortlist the best visual slides, followed by human approval;
+5. manual or OpenAI-suggested crop coordinates with locally rendered previews;
+6. a locked Seedance 2.0 / 480p preflight manifest.
+
+The prototype cannot submit a video-generation task. Its final button is
+intentionally disabled, so using the UI cannot spend Kie video credits.
+
+Set `OPENAI_API_KEY` in `.env` for script synthesis, visual-slide selection,
+and crop analysis. The default model is `gpt-5.4-mini`; override it with
+`OPENAI_PDF_MODEL` if needed.
+
 Full walkthrough with curl: [setup-and-run.md](docs/setup-and-run.md#5-running-it).
 
 ---
@@ -104,10 +124,9 @@ back into the next attempt. Which means:
 ## Repo layout
 
 ```
-main.py              the 12 endpoints — 8 POSTs driving the pipeline, plus
-                     /health, /pipeline/cost, /pipeline/characters,
-                     /pipeline/audios
+main.py              application composition + the original staged endpoints
 app/
+  pdf_review.py      PDF import, scripting, crop review, locked preflight API
   config.py          director knobs + the only Gemini key read
   schemas.py         blueprint v3 models + HTTP models
   libraries.py       character/audio index (has a CLI)

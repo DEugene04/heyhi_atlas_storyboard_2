@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas PDF Video Lab</title>
+  <link rel="stylesheet" href="/pdf-review/ui/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/pdf-review/" aria-label="Atlas PDF Video Lab home">
+      <span class="brand-mark">A</span>
+      <span><strong>Atlas</strong><small>PDF Video Lab</small></span>
+    </a>
+    <div class="safety-pill"><span></span> Review mode · video generation locked</div>
+  </header>
+
+  <div class="shell">
+    <aside class="rail">
+      <p class="rail-label">Workflow</p>
+      <nav id="stepNav" aria-label="Review stages">
+        <button class="nav-step active" data-step="1"><b>01</b><span>Source PDF<small>Import & scope</small></span></button>
+        <button class="nav-step" data-step="2" disabled><b>02</b><span>Script<small>Draft & approve</small></span></button>
+        <button class="nav-step" data-step="3" disabled><b>03</b><span>Scenes<small>Timing & direction</small></span></button>
+        <button class="nav-step" data-step="4" disabled><b>04</b><span>Source visuals<small>Crop & inspect</small></span></button>
+        <button class="nav-step" data-step="5" disabled><b>05</b><span>Preflight<small>Final review only</small></span></button>
+      </nav>
+      <div class="rail-note">
+        <span class="lock-icon">⌁</span>
+        <strong>Zero video calls</strong>
+        <p>This workspace cannot submit a Seedance task. Analysis calls are always explicit.</p>
+      </div>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Review-first prototype</p>
+          <h1>Turn a PDF into a video plan you can trust.</h1>
+          <p>Inspect the source, shape the script, verify every scene and crop, then stop at a locked generation gate.</p>
+        </div>
+        <div class="target-card">
+          <span>Target output</span>
+          <strong id="heroDuration">75 sec</strong>
+          <small>Seedance 2.0 · 480p · 16:9</small>
+        </div>
+      </section>
+
+      <div id="notice" class="notice hidden" role="status"></div>
+
+      <section class="stage active" data-stage="1">
+        <div class="stage-head">
+          <div><span class="stage-kicker">Step 01</span><h2>Bring in the source deck</h2><p>Use a public or presigned S3/CloudFront URL. Local upload is included for prototype testing.</p></div>
+          <span class="status-chip neutral" id="sourceStatus">Waiting for source</span>
+        </div>
+
+        <div class="panel source-panel">
+          <div class="field full">
+            <label for="pdfUrl">S3 PDF URL</label>
+            <div class="input-action"><input id="pdfUrl" type="url" placeholder="https://bucket.s3.ap-southeast-1.amazonaws.com/training.pdf?..."><button id="importUrl" class="button primary">Import PDF</button></div>
+            <small>HTTPS only · Amazon S3 or CloudFront · maximum 100 MB / 250 slides</small>
+          </div>
+          <div class="or"><span>or test locally</span></div>
+          <div class="field full upload-row">
+            <input id="pdfFile" type="file" accept="application/pdf,.pdf">
+            <button id="importFile" class="button secondary">Upload local PDF</button>
+          </div>
+          <div class="form-grid">
+            <div class="field span-2"><label for="objective">Video objective</label><textarea id="objective" rows="2">Explain the most important ideas clearly, with a presenter referring to source visuals from the deck.</textarea></div>
+            <div class="field"><label for="language">Narration language</label><input id="language" value="English"></div>
+            <div class="field"><label for="duration">Target length</label><select id="duration"><option value="60">60 seconds</option><option value="75" selected>75 seconds</option><option value="90">90 seconds</option></select></div>
+            <div class="field span-2"><label for="avatarUrl">Avatar reference URL <em>optional for planning</em></label><input id="avatarUrl" type="url" placeholder="https://.../presenter.png"></div>
+          </div>
+        </div>
+
+        <div id="sourceResults" class="hidden">
+          <div class="metric-row">
+            <div><span>Project</span><strong id="projectId">—</strong></div>
+            <div><span>Slides extracted</span><strong id="pageCount">0</strong></div>
+            <div><span>Slides selected</span><strong id="selectedCount">0</strong></div>
+            <div><span>Video spend</span><strong>$0.00</strong></div>
+          </div>
+          <div class="review-toolbar">
+            <div><h3>Select the story scope</h3><p>Choose a focused subset, or select all and let the draft identify the key points. Recommendations are preselected.</p></div>
+            <div class="toolbar-actions"><button id="clearSlides" class="text-button">Clear</button><button id="selectAllSlides" class="text-button">Select all</button><button id="recommendedSlides" class="text-button">Use recommendations</button></div>
+          </div>
+          <div id="slideGrid" class="slide-grid"></div>
+          <div class="approval-bar"><label><input id="approveSource" type="checkbox"> I reviewed the selected source slides</label><button id="toScript" class="button primary" disabled>Continue to script <span>→</span></button></div>
+        </div>
+      </section>
+
+      <section class="stage" data-stage="2">
+        <div class="stage-head">
+          <div><span class="stage-kicker">Step 02</span><h2>Shape the narration</h2><p>Start with a free extractive draft, or make one explicit OpenAI text call for synthesis.</p></div>
+          <span class="status-chip" id="scriptStatus">Not drafted</span>
+        </div>
+        <div class="choice-row">
+          <button id="draftLocal" class="choice-card"><span class="choice-icon free">Aa</span><span><strong>Local extraction draft</strong><small>No AI call · fast · intended as a writing scaffold</small></span><b>Free</b></button>
+          <button id="draftAi" class="choice-card"><span class="choice-icon ai">✦</span><span><strong>Synthesize with OpenAI</strong><small>Uses selected slide text only · one explicit API call</small></span><b>1 call</b></button>
+        </div>
+        <div id="scriptEmpty" class="empty-state"><span>✎</span><h3>Your draft will appear here</h3><p>Nothing is sent to an AI provider until you choose the OpenAI option.</p></div>
+        <div id="scriptEditor" class="hidden">
+          <div class="panel script-meta"><div class="field"><label for="scriptTitle">Video title</label><input id="scriptTitle"></div><div class="readout"><span>Estimated runtime</span><strong id="runtimeReadout">—</strong></div></div>
+          <div id="scriptSections" class="script-sections"></div>
+          <div class="approval-bar"><label><input id="approveScript" type="checkbox"> Script facts and tone are approved</label><button id="toScenes" class="button primary" disabled>Build scene plan <span>→</span></button></div>
+        </div>
+      </section>
+
+      <section class="stage" data-stage="3">
+        <div class="stage-head">
+          <div><span class="stage-kicker">Step 03</span><h2>Direct each presenter scene</h2><p>Every scene keeps its source-slide trace and uses the avatar-plus-display composition.</p></div>
+          <span class="status-chip" id="sceneStatus">Draft plan</span>
+        </div>
+        <div class="scene-summary"><div><span id="sceneCount">0</span><small>scenes</small></div><div><span id="sceneRuntime">0s</span><small>planned</small></div><div><span>1</span><small>avatar</small></div><div><span>0</span><small>video calls</small></div></div>
+        <div id="sceneList" class="scene-list"></div>
+        <div class="approval-bar"><label><input id="approveScenes" type="checkbox"> Scene order, narration, and directions are approved</label><button id="toCrops" class="button primary" disabled>Review source visuals <span>→</span></button></div>
+      </section>
+
+      <section class="stage" data-stage="4">
+        <div class="stage-head">
+          <div><span class="stage-kicker">Step 04</span><h2>Select and frame source visuals</h2><p>First choose which slides should appear on screen. Then detect and review the crop on each approved slide.</p></div>
+          <span class="status-chip" id="cropStatus">Visual selection required</span>
+        </div>
+        <div class="visual-select-panel panel">
+          <div class="visual-select-head"><div><span class="substep">04A · SELECT SLIDES</span><h3>Which source visuals should the presenter reference?</h3><p>OpenAI compares the approved scene narration with the selected PDF scope and recommends a small visual set. No crop or video is generated yet.</p></div><div class="visual-actions"><button id="useSceneSlides" class="button secondary">Use scene-linked slides</button><button id="selectVisualsAi" class="button primary">Select with OpenAI · 1 call</button></div></div>
+          <div id="visualSelectionEmpty" class="visual-selection-empty">Run AI selection or use the scene-linked slides as a manual starting point.</div>
+          <div id="visualChoiceGrid" class="visual-choice-grid hidden"></div>
+          <div class="visual-confirm-bar"><span><strong id="visualSelectedCount">0</strong> slides chosen for crop extraction</span><button id="confirmVisuals" class="button primary" disabled>Confirm visual slides <span>→</span></button></div>
+        </div>
+        <div id="cropWorkspace" class="hidden">
+          <div class="substep-heading"><span class="substep">04B · EXTRACT IMAGES</span><h3>Find and verify each crop</h3></div>
+          <div class="cost-callout"><div><span class="choice-icon ai">✦</span><div><strong>Suggest crops with OpenAI</strong><p id="cropCallText">One image-analysis call per confirmed visual slide. No video generation.</p></div></div><button id="suggestCrops" class="button secondary">Suggest crop boxes</button></div>
+          <div id="cropList" class="crop-list"></div>
+          <div class="approval-bar stacked"><div><button id="renderCrops" class="button secondary">Render crop previews</button><span id="cropRenderHint">Adjust coordinates, then render the actual source pixels.</span></div><div><label><input id="approveCrops" type="checkbox"> Every source crop is legible and approved</label><button id="toPreflight" class="button primary" disabled>Open preflight <span>→</span></button></div></div>
+        </div>
+      </section>
+
+      <section class="stage" data-stage="5">
+        <div class="stage-head">
+          <div><span class="stage-kicker">Step 05</span><h2>Generation preflight</h2><p>This is the deliberate stopping point: inspect the exact plan without spending video credits.</p></div>
+          <span class="status-chip safe">Ready for review · locked</span>
+        </div>
+        <div class="preflight-grid">
+          <div class="panel final-preview">
+            <div class="preview-stage"><div class="avatar-shape"><span></span></div><div class="display-frame"><img id="finalCropPreview" alt="Approved source crop"><span id="displayPlaceholder">Approved source visual</span></div></div>
+            <div class="preview-caption"><strong>Presenter + source visual</strong><span>Concept composition only</span></div>
+          </div>
+          <div class="panel spec-card">
+            <h3>Video request contract</h3>
+            <dl><div><dt>Provider</dt><dd>kie.ai</dd></div><div><dt>Verified model ID</dt><dd>bytedance/seedance-2</dd></div><div><dt>Requested variant</dt><dd>Seedance 2.0 Mini <em>unverified alias</em></dd></div><div><dt>Resolution</dt><dd>480p</dd></div><div><dt>Aspect ratio</dt><dd>16:9</dd></div><div><dt>Native audio</dt><dd>Off</dd></div></dl>
+          </div>
+        </div>
+        <div class="panel checklist"><h3>Human review record</h3><div class="check-grid"><span>✓ Source scope approved</span><span>✓ Script approved</span><span>✓ Scene plan approved</span><span>✓ Crops approved</span><span>✓ Source trace retained</span><span>✓ No video calls made</span></div></div>
+        <details class="manifest"><summary>View preflight manifest</summary><pre id="manifestJson">Preparing manifest…</pre></details>
+        <div class="generation-lock"><div><span class="big-lock">⌁</span><div><strong>Video generation is intentionally disabled</strong><p>The prototype ends here. Enabling this later will require crop hosting, final cost confirmation, and the verified Kie model contract.</p></div></div><button class="button locked" disabled>Generate video · locked</button></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="busy" class="busy hidden"><div class="spinner"></div><strong id="busyTitle">Working…</strong><span id="busyText">Please keep this page open.</span></div>
+  <script src="/pdf-review/ui/app.js"></script>
+</body>
+</html>

@@ -268,6 +268,11 @@ has a future; those do not.
 Low risk but not zero: unused credentials in a deployed environment are still
 credentials that can leak.
 
+**Addendum 2026-10-29.** The PDF review prototype now uses the OpenAI SDK for
+script synthesis, visual-slide selection, and visual crop analysis. It deliberately uses the standard
+`OPENAI_API_KEY` variable; the legacy `HEYHI_OPENAI_API_KEY` statement above
+remains true. The original eight-layer pipeline is unchanged.
+
 ## 27. ON HOLD — would a single composed reference image replace the storyboard?
 
 **Decision 2026-08-02: not changing the winning team.** Output quality is
