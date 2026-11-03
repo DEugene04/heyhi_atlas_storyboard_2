@@ -363,6 +363,32 @@ function updateCropBox(card, crop) {
   box.style.height = `${Math.min(crop.height, 1 - crop.y) * 100}%`;
 }
 
+$("#detectCrops").addEventListener("click", async () => {
+  const pages = [...state.crops.keys()];
+  showBusy("Detecting source visuals", "Reading figure coordinates straight from the PDF locally; no AI call, no cost.");
+  try {
+    const data = await jsonPost("/detect-crops", { project_id: state.project.project_id, pages });
+    let found = 0;
+    const empty = [];
+    data.suggestions.forEach(item => {
+      if (item.width != null) {
+        state.crops.set(item.page, {
+          page: item.page, x: item.x, y: item.y, width: item.width, height: item.height,
+          label: item.label || slideByPage(item.page)?.title || "Source visual",
+        });
+        found += 1;
+      } else {
+        empty.push(item.page); // text-only slide: keep its default box for manual adjustment
+      }
+    });
+    state.cropResults.clear();
+    renderCrops();
+    $("#cropStatus").textContent = `${found} PDF-detected box${found === 1 ? "" : "es"} · review required`;
+    const tail = empty.length ? ` No standalone figure on slide${empty.length === 1 ? "" : "s"} ${empty.join(", ")} — adjust those manually.` : "";
+    notice(`Detected ${found} crop box${found === 1 ? "" : "es"} from the PDF (no AI cost).${tail} Adjust and render previews before approval.`);
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+});
+
 $("#suggestCrops").addEventListener("click", async () => {
   const pages = [...state.crops.keys()];
   showBusy("Finding source visuals", `${pages.length} explicit OpenAI analysis call${pages.length === 1 ? "" : "s"}; no video calls.`);
