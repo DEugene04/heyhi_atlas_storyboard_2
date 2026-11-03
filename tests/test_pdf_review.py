@@ -115,6 +115,53 @@ def test_local_draft_condenses_a_large_selection() -> None:
     assert sum(section["duration_s"] for section in result["sections"]) <= 120
 
 
+def test_detect_crops_finds_a_figure_region_without_ai(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    doc = pymupdf.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((70, 60), "Slide title", fontsize=24)  # header chrome
+    # a filled box in the middle of the slide = a detectable figure region
+    page.draw_rect(pymupdf.Rect(300, 180, 660, 400), color=(0, 0, 0), fill=(0.2, 0.4, 0.8))
+    pdf_bytes = doc.tobytes()
+
+    client = TestClient(app)
+    imported = client.post(
+        "/pdf-review/import-file?target_seconds=75&language=English",
+        files={"file": ("figure.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    ).json()
+
+    detected = client.post(
+        "/pdf-review/detect-crops",
+        json={"project_id": imported["project_id"], "pages": [1]},
+    )
+    assert detected.status_code == 200
+    body = detected.json()
+    assert body["calls"] == 0  # no OpenAI spend
+    assert body["model"] == "pdf-native"
+    region = body["suggestions"][0]
+    assert region["region_count"] >= 1
+    # a tight box, not the whole slide, roughly where the rectangle was drawn
+    assert 0.0 < region["width"] < 1.0 and 0.0 < region["height"] < 1.0
+    assert 0.25 < region["x"] < 0.4
+
+
+def test_detect_crops_reports_no_figure_on_text_only_slide(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    client = TestClient(app)
+    imported = client.post(
+        "/pdf-review/import-file?target_seconds=75&language=English",
+        files={"file": ("training.pdf", io.BytesIO(_pdf_bytes()), "application/pdf")},
+    ).json()
+
+    detected = client.post(
+        "/pdf-review/detect-crops",
+        json={"project_id": imported["project_id"], "pages": [1]},
+    )
+    assert detected.status_code == 200
+    region = detected.json()["suggestions"][0]
+    assert region["crop"] is None  # nothing to crop; caller decides, no blind full-page box
+
+
 def test_url_import_rejects_non_s3_host() -> None:
     response = TestClient(app).post(
         "/pdf-review/import-url",
