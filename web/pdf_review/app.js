@@ -363,12 +363,16 @@ function updateCropBox(card, crop) {
   box.style.height = `${Math.min(crop.height, 1 - crop.y) * 100}%`;
 }
 
-$("#detectCrops").addEventListener("click", async () => {
+$("#autoCrops").addEventListener("click", async () => {
   const pages = [...state.crops.keys()];
-  showBusy("Detecting source visuals", "Reading figure coordinates straight from the PDF locally; no AI call, no cost.");
+  // narration gives the model context for "what matters" on multi-figure slides
+  const scenes = state.scenes
+    .filter(scene => pages.includes(scene.visual_page || scene.page))
+    .map(scene => ({ page: scene.visual_page || scene.page, narration: scene.narration }));
+  showBusy("Auto-detecting crops", "Reading exact figure coordinates from the PDF; OpenAI only picks a region on slides with more than one figure.");
   try {
-    const data = await jsonPost("/detect-crops", { project_id: state.project.project_id, pages });
-    let found = 0;
+    const data = await jsonPost("/auto-crops", { project_id: state.project.project_id, pages, scenes });
+    let boxed = 0;
     const empty = [];
     data.suggestions.forEach(item => {
       if (item.width != null) {
@@ -376,29 +380,16 @@ $("#detectCrops").addEventListener("click", async () => {
           page: item.page, x: item.x, y: item.y, width: item.width, height: item.height,
           label: item.label || slideByPage(item.page)?.title || "Source visual",
         });
-        found += 1;
+        boxed += 1;
       } else {
-        empty.push(item.page); // text-only slide: keep its default box for manual adjustment
+        empty.push(item.page); // no figure: keep the default box for manual adjustment
       }
     });
     state.cropResults.clear();
     renderCrops();
-    $("#cropStatus").textContent = `${found} PDF-detected box${found === 1 ? "" : "es"} · review required`;
+    $("#cropStatus").textContent = `${boxed} auto crop${boxed === 1 ? "" : "s"} · ${data.calls} AI call${data.calls === 1 ? "" : "s"} · review required`;
     const tail = empty.length ? ` No standalone figure on slide${empty.length === 1 ? "" : "s"} ${empty.join(", ")} — adjust those manually.` : "";
-    notice(`Detected ${found} crop box${found === 1 ? "" : "es"} from the PDF (no AI cost).${tail} Adjust and render previews before approval.`);
-  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
-});
-
-$("#suggestCrops").addEventListener("click", async () => {
-  const pages = [...state.crops.keys()];
-  showBusy("Finding source visuals", `${pages.length} explicit OpenAI analysis call${pages.length === 1 ? "" : "s"}; no video calls.`);
-  try {
-    const data = await jsonPost("/suggest-crops", { project_id: state.project.project_id, pages });
-    data.suggestions.forEach(item => state.crops.set(item.page, item));
-    state.cropResults.clear();
-    renderCrops();
-    $("#cropStatus").textContent = `${data.calls} AI suggestions · review required`;
-    notice("Crop suggestions received. Adjust every box and render previews before approval.");
+    notice(`Auto-detected ${boxed} crop box${boxed === 1 ? "" : "es"} (${data.calls} paid AI call${data.calls === 1 ? "" : "s"}, only for multi-figure slides).${tail} Adjust and render previews before approval.`);
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 });
 

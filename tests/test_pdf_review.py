@@ -162,6 +162,103 @@ def test_detect_crops_reports_no_figure_on_text_only_slide(tmp_path, monkeypatch
     assert region["crop"] is None  # nothing to crop; caller decides, no blind full-page box
 
 
+def _two_figure_pdf() -> bytes:
+    doc = pymupdf.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((70, 40), "Two figures", fontsize=24)  # header chrome
+    page.draw_rect(pymupdf.Rect(100, 150, 300, 350), fill=(0.8, 0.2, 0.2))  # candidate 1 (left)
+    page.draw_rect(pymupdf.Rect(650, 150, 850, 350), fill=(0.2, 0.4, 0.8))  # candidate 2 (right)
+    return doc.tobytes()
+
+
+def _import(client, pdf_bytes):
+    return client.post(
+        "/pdf-review/import-file?target_seconds=75&language=English",
+        files={"file": ("f.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    ).json()
+
+
+def test_auto_crops_single_figure_skips_the_model(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    doc = pymupdf.open()
+    page = doc.new_page(width=960, height=540)
+    page.draw_rect(pymupdf.Rect(300, 180, 660, 400), fill=(0.2, 0.4, 0.8))  # one figure
+    client = TestClient(app)
+    imported = _import(client, doc.tobytes())
+
+    result = client.post(
+        "/pdf-review/auto-crops",
+        json={"project_id": imported["project_id"], "pages": [1]},
+    )
+    assert result.status_code == 200
+    body = result.json()
+    assert body["calls"] == 0  # single candidate -> no paid call
+    region = body["suggestions"][0]
+    assert region["candidate_count"] == 1
+    assert region["source"] == "pdf"
+    assert 0.0 < region["width"] < 1.0 and 0.25 < region["x"] < 0.4
+
+
+def test_auto_crops_multi_figure_lets_the_model_choose(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+
+    class FakeResponses:
+        def __init__(self) -> None:
+            self.calls = []
+
+        def parse(self, **kwargs):
+            self.calls.append(kwargs)
+            return SimpleNamespace(
+                output_parsed=review._AICropChoice(candidate_number=2, rationale="right chart")
+            )
+
+    responses = FakeResponses()
+    monkeypatch.setattr(review, "_openai_client", lambda: SimpleNamespace(responses=responses))
+    monkeypatch.setattr(review, "_openai_model", lambda: "test-model")
+    client = TestClient(app)
+    imported = _import(client, _two_figure_pdf())
+
+    result = client.post(
+        "/pdf-review/auto-crops",
+        json={
+            "project_id": imported["project_id"],
+            "pages": [1],
+            "scenes": [{"page": 1, "narration": "Look at the chart on the right."}],
+        },
+    )
+    assert result.status_code == 200
+    body = result.json()
+    assert body["calls"] == 1
+    region = body["suggestions"][0]
+    assert region["candidate_count"] == 2
+    assert region["source"] == "pdf+llm"
+    # candidate 2 is the right-hand box (x ~ 650/960)
+    assert 0.6 < region["x"] < 0.72
+    # the numbered overlay image was actually sent to the model
+    image_part = responses.calls[0]["input"][0]["content"][1]
+    assert image_part["type"] == "input_image"
+    assert image_part["image_url"].startswith("data:image/jpeg;base64,")
+
+
+def test_auto_crops_falls_back_to_union_without_a_key(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    client = TestClient(app)
+    imported = _import(client, _two_figure_pdf())
+
+    result = client.post(
+        "/pdf-review/auto-crops",
+        json={"project_id": imported["project_id"], "pages": [1]},
+    )
+    assert result.status_code == 200  # degrades, never errors
+    body = result.json()
+    assert body["calls"] == 0
+    region = body["suggestions"][0]
+    assert region["source"] == "pdf-fallback"
+    # union of both figures spans left box start to right box end
+    assert region["x"] < 0.2 and region["x"] + region["width"] > 0.8
+
+
 def test_url_import_rejects_non_s3_host() -> None:
     response = TestClient(app).post(
         "/pdf-review/import-url",

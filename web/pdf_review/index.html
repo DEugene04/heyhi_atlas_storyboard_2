@@ -129,8 +129,7 @@
         </div>
         <div id="cropWorkspace" class="hidden">
           <div class="substep-heading"><span class="substep">04B · EXTRACT IMAGES</span><h3>Find and verify each crop</h3></div>
-          <div class="cost-callout"><div><span class="choice-icon free">⌁</span><div><strong>Detect from PDF <em>free</em></strong><p>Reads the exact figure coordinates already stored in the PDF. No AI call, no cost — recommended first pass.</p></div></div><button id="detectCrops" class="button secondary">Detect crop boxes</button></div>
-          <div class="cost-callout"><div><span class="choice-icon ai">✦</span><div><strong>Suggest crops with OpenAI</strong><p id="cropCallText">One image-analysis call per confirmed visual slide. No video generation.</p></div></div><button id="suggestCrops" class="button secondary">Suggest crop boxes</button></div>
+          <div class="cost-callout"><div><span class="choice-icon ai">✦</span><div><strong>Auto-detect crops</strong><p id="cropCallText">The PDF supplies exact figure coordinates; OpenAI only picks which region matters, and only when a slide has more than one. No video generation.</p></div></div><button id="autoCrops" class="button secondary">Auto-detect crop boxes</button></div>
           <div id="cropList" class="crop-list"></div>
           <div class="approval-bar stacked"><div><button id="renderCrops" class="button secondary">Render crop previews</button><span id="cropRenderHint">Adjust coordinates, then render the actual source pixels.</span></div><div><label><input id="approveCrops" type="checkbox"> Every source crop is legible and approved</label><button id="toPreflight" class="button primary" disabled>Open preflight <span>→</span></button></div></div>
         </div>
