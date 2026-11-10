@@ -14,6 +14,15 @@ Endpoints
   POST /pipeline/music      L7  generate the background bed (Lyria)          [network+credits]
   POST /pipeline/render     L8  merge + title + transitions + subs + music   [local ffmpeg]
 
+  GET  /pipeline/status     run progress derived from files (free; safe to poll)
+  GET  /pipeline/runs       run directories, newest first
+  GET  /pipeline/blueprint  blueprint.json (+ placeholder snapshot after select)
+  GET  /pipeline/files/{run_id}/{path}   run artifacts (png/mp4/mp3/wav/srt)
+  GET  /pipeline/characters/{id}/image   library character image
+  GET  /pipeline/audios/{id}/sample      library voice sample
+
+  GET  /                    landing page: Default (/studio/) vs Presentation
+  GET  /studio/             UI for the default /pipeline/* API
   GET  /pdf-review/         review-first PDF prototype; intentionally stops
                             at a locked Seedance preflight manifest
 

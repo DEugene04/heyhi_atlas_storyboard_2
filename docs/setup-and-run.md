@@ -299,6 +299,36 @@ uvicorn main:app --reload --port 8000        # from the repo root
 
 Interactive docs at `http://localhost:8000/docs`. Liveness at `/health`.
 
+### Front-end
+
+| URL | What |
+| --- | --- |
+| `/` | Mode picker: **Default** (text source, `/pipeline/*` API) or **Presentation** (PDF deck) |
+| `/studio/` | Default-pipeline UI: config, director, cast, assets, scenes, music, render, with a live cost panel |
+| `/pdf-review/` | Presentation (PDF) prototype |
+
+Studio keeps no state of its own beyond the last `run_id` in `localStorage`. Every
+screen is rebuilt from `GET /pipeline/status`, so refreshing the page, or opening
+an older run from the picker, lands on the right step. Paid buttons only ever run
+from a click, and *Regenerate* asks for confirmation first. Studio always selects
+voices from ElevenLabs (`voice_source=elevenlabs`, `tts_provider=elevenlabs`).
+
+Read-only endpoints the UI uses (free, no network except `/pipeline/audios`):
+
+```
+GET /pipeline/status?run_id=          stage + per-scene progress, derived from files only
+GET /pipeline/runs                    run directories, newest first
+GET /pipeline/blueprint?run_id=       blueprint.json (+ placeholder snapshot after select)
+GET /pipeline/files/{run_id}/{path}   png / mp4 / mp3 / wav / srt artifacts of a run
+GET /pipeline/characters/{id}/image   library character image
+GET /pipeline/audios/{id}/sample      library voice sample (voice_source=index)
+```
+
+`/pipeline/scenes` is a single blocking request that can run for many minutes.
+Studio polls `/pipeline/status` while it is open; the server answers concurrently
+because handlers are plain `def`. Closing the tab does not stop the server, and
+reopening the run shows how far it got.
+
 ### End to end
 
 Stages marked 💸 spend money.
