@@ -72,6 +72,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from app.config import make_client
 from app.clients.video_veo_client import VeoError, retry_backoff_from_env
@@ -93,6 +94,7 @@ from app.libraries import CharacterEntry, load_audio_index, load_character_index
 
 from app.pipeline.patch_blueprint import patch_run, PatchError
 from app.pdf_review import router as pdf_review_router
+from app.studio_ui import landing_router, router as studio_router
 
 # storage root is env-overridable so tests/prod never share a tree
 STORAGE_ROOT = Path(
@@ -116,6 +118,10 @@ app = FastAPI(title="Atlas Pipeline - Layer 1", version="1.0")
 # Review-only PDF workflow. Its final generation control is intentionally
 # locked; the existing text-to-video endpoints remain unchanged.
 app.include_router(pdf_review_router)
+
+# Landing page (mode picker) at / and the default-API front-end at /studio/.
+app.include_router(landing_router)
+app.include_router(studio_router)
 
 def _run_dir(run_id: str, must_exist: bool = True) -> Path:
     """Resolve a run_id to its directory. Shape check + containment check (never
@@ -150,6 +156,164 @@ def run_cost(run_id: str) -> dict:
     """
     from app.costs import summarize
     return {"run_id": run_id, **summarize(_run_dir(run_id))}
+
+# ----------------------------------------------------------------------
+# Read-only views for the front-end. FREE: no network, no credits.
+# ----------------------------------------------------------------------
+# The write endpoints above can start every stage but cannot show anything. These
+# derive everything from file existence — the same rule as the 409 checks — so
+# there is still no database and no state beyond the run directory.
+_SERVABLE_SUFFIXES = {".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".wav", ".srt"}
+
+
+def _read_json(path: Path) -> dict | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _count(d: Path, pattern: str) -> int:
+    return sum(1 for _ in d.glob(pattern)) if d.is_dir() else 0
+
+
+def _run_status(d: Path) -> dict:
+    """Where a run is, from which stage files exist. Mirrors the precondition
+    checks of the endpoints above, so 'selected' means /pipeline/assets will
+    accept the run, and so on."""
+    from app.pipeline.external_tts import scene_is_done
+
+    bp = _read_json(d / "blueprint.json")
+    scenes = []
+    for sc in (bp or {}).get("scenes", []):
+        sid = sc["id"]
+        speaking = sc.get("type") == "video-with-audio"
+        scenes.append({
+            "id": sid,
+            "type": sc.get("type"),
+            "topic": sc.get("topic"),
+            "raw": (d / "veo_raw" / f"{sid}.mp4").is_file(),
+            # a speaking scene is only finished once L6 wrote its marker; the
+            # working copy in scenes/ exists earlier, before the voice is laid on
+            "ready": scene_is_done(d, sid) if speaking
+                     else (d / "scenes" / f"{sid}.mp4").is_file(),
+        })
+
+    flags = {
+        "config": (d / "config.json").is_file(),
+        "source": (d / "source.txt").is_file(),
+        "blueprint": bp is not None,
+        "selected": (d / "selections.json").is_file(),
+        "music": (d / "music_bg" / "track.mp3").is_file(),
+        "final": (d / "final.mp4").is_file(),
+    }
+    ready = sum(1 for s in scenes if s["ready"])
+    # furthest stage reached, in pipeline order
+    stage = "new"
+    for name, reached in (
+        ("config", flags["config"]), ("source", flags["source"]),
+        ("blueprint", flags["blueprint"]), ("selected", flags["selected"]),
+        ("assets", _count(d / "backgrounds", "*.png") > 0),
+        ("scenes", bool(scenes) and ready == len(scenes)),
+        ("final", flags["final"]),
+    ):
+        if reached:
+            stage = name
+    return {
+        "run_id": d.name,
+        "stage": stage,
+        **flags,
+        "title": (bp or {}).get("title"),
+        "backgrounds": _count(d / "backgrounds", "*.png"),
+        "storyboards": _count(d / "storyboard", "*.png"),
+        "veo_raw": _count(d / "veo_raw", "*.mp4"),
+        "scenes_ready": ready,
+        "scenes_total": len(scenes),
+        "scene_states": scenes,
+    }
+
+
+@app.get("/pipeline/status")
+def run_status(run_id: str) -> dict:
+    """Progress of one run, derived from files only. Safe to poll while a
+    billable POST is still open: handlers are plain `def`, so they run in the
+    threadpool and this is served concurrently."""
+    return _run_status(_run_dir(run_id))
+
+
+@app.get("/pipeline/runs")
+def list_runs() -> list[dict]:
+    """Every run directory, newest first. Directories that are not runs are ignored."""
+    if not STORAGE_ROOT.is_dir():
+        return []
+    runs = [p for p in STORAGE_ROOT.iterdir() if p.is_dir() and _RUN_ID_RE.match(p.name)]
+    runs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    out = []
+    for p in runs:
+        st = _run_status(p)
+        out.append({"run_id": p.name, "stage": st["stage"], "title": st["title"],
+                    "updated": int(p.stat().st_mtime)})
+    return out
+
+
+@app.get("/pipeline/blueprint")
+def get_blueprint(run_id: str) -> dict:
+    """blueprint.json, plus the pre-select snapshot (placeholder ids) once
+    /pipeline/select has run. The UI needs the placeholders to build its picker."""
+    d = _run_dir(run_id)
+    bp = _read_json(d / "blueprint.json")
+    if bp is None:
+        raise HTTPException(409, "blueprint.json not found - run director first")
+    return {"run_id": run_id, "blueprint": bp,
+            "placeholder": _read_json(d / "blueprint.placeholder.json")}
+
+
+def _contained_file(root: Path, relative: str) -> Path:
+    """Resolve `relative` under `root` or fail. Containment is checked on the
+    resolved path, so '..' segments and symlinks pointing outside are refused."""
+    target = (root / relative).resolve()
+    try:
+        target.relative_to(root.resolve())
+    except ValueError:
+        raise HTTPException(400, "path escapes its directory")
+    if target.suffix.lower() not in _SERVABLE_SUFFIXES:
+        raise HTTPException(404, "file type not served")
+    if not target.is_file():
+        raise HTTPException(404, "file not found")
+    return target
+
+
+@app.get("/pipeline/files/{run_id}/{relative_path:path}")
+def run_file(run_id: str, relative_path: str) -> FileResponse:
+    """A generated artifact of a run: backgrounds, storyboards, scene clips,
+    music, subtitles, final.mp4."""
+    return FileResponse(_contained_file(_run_dir(run_id), relative_path))
+
+
+@app.get("/pipeline/characters/{char_id}/image")
+def character_image(char_id: str) -> FileResponse:
+    try:
+        entries = load_character_index(CHAR_LIB_ROOT)
+    except FileNotFoundError:
+        raise HTTPException(503, "character library not initialized")
+    entry = next((e for e in entries if e.char_id == char_id), None)
+    if entry is None:
+        raise HTTPException(404, f"unknown char_id '{char_id}'")
+    return FileResponse(_contained_file(CHAR_LIB_ROOT, entry.image_path))
+
+
+@app.get("/pipeline/audios/{audio_id}/sample")
+def audio_sample(audio_id: str) -> FileResponse:
+    """Voice sample for the `index` voice source (ElevenLabs voices carry their
+    own preview_url instead)."""
+    try:
+        entries = load_audio_index(AUDIO_LIB_ROOT)
+    except FileNotFoundError:
+        raise HTTPException(503, "audio library not initialized")
+    entry = next((e for e in entries if e.audio_id == audio_id), None)
+    if entry is None:
+        raise HTTPException(404, f"unknown audio_id '{audio_id}'")
+    return FileResponse(_contained_file(AUDIO_LIB_ROOT, entry.sample_path))
 
 # ----------------------------------------------------------------------
 # Layer 1 - Source + Config
