@@ -143,3 +143,26 @@ def test_landing_and_both_apps_are_served(env):
     assert c.get("/studio/ui/app.js").status_code == 200
     assert c.get("/studio/ui/secret.py").status_code == 404
     assert c.get("/pdf-review/").status_code == 200
+
+
+def test_select_can_be_submitted_twice(env, tmp_path):
+    """After the first /select blueprint.json holds resolved ids; the second call
+    must still validate against the placeholders (the pristine snapshot)."""
+    import shutil
+    c, d, chars, auds = env
+    src = main.Path(__file__).resolve().parents[1] / "docs" / "examples" / "run_0616c9e5"
+    for name in ("blueprint.json", "blueprint.placeholder.json", "config.json"):
+        shutil.copy(src / name, d / name)
+    # first select starts from a fresh director output: placeholders only
+    shutil.copy(src / "blueprint.placeholder.json", d / "blueprint.json")
+    (d / "blueprint.placeholder.json").unlink()
+    for cid in ("char_a", "char_b"):
+        (chars / f"{cid}.png").write_bytes(b"\x89PNG")
+    (chars / "index.json").write_text(json.dumps(
+        [{"char_id": i, "image_path": f"{i}.png"} for i in ("char_a", "char_b")]))
+    body = lambda cid: {"run_id": RID, "voice_source": "elevenlabs", "selections": [
+        {"placeholder_id": "char_narrator", "char_id": cid, "audio_id": "voice1"}]}
+    assert c.post("/pipeline/select", json=body("char_a")).status_code == 200
+    r = c.post("/pipeline/select", json=body("char_b"))
+    assert r.status_code == 200, r.text
+    assert "char_b" in (d / "blueprint.json").read_text()

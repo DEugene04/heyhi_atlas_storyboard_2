@@ -503,8 +503,12 @@ def select(sel: SelectIn) -> SelectOut:
         except FileNotFoundError:
             raise HTTPException(503, "audio library not initialized")
  
-    # placeholders the director actually emitted = union of scene.characters
-    bp = json.loads(bp_path.read_text(encoding="utf-8"))
+    # placeholders the director actually emitted = union of scene.characters.
+    # Once a selection has been applied blueprint.json holds RESOLVED library ids,
+    # so a second /select must read the pristine snapshot, or changing your mind
+    # would always be rejected as "missing placeholders".
+    pristine = d / "blueprint.placeholder.json"
+    bp = json.loads((pristine if pristine.is_file() else bp_path).read_text(encoding="utf-8"))
     expected: set[str] = set()
     for sc in bp.get("scenes", []):
         expected.update(sc.get("characters", []))
