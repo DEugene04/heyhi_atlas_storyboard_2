@@ -10,6 +10,7 @@ const state = {
   visualSelected: new Set(),
   crops: new Map(),
   cropResults: new Map(),
+  videos: new Map(),
 };
 
 function showBusy(title, text = "Please keep this page open.") {
@@ -97,11 +98,30 @@ async function importSource(mode) {
     state.visualSelected.clear();
     state.crops.clear();
     state.cropResults.clear();
+    state.videos.clear();
     renderSource();
+    await maybeUploadCharacter(data.project_id);
     notice(`${data.page_count} slides extracted. Review the recommended scope before continuing.`);
   } catch (error) {
     notice(error.message, true);
   } finally { hideBusy(); }
+}
+
+// Optional: if a character image was chosen, attach it to the freshly created project.
+// It's an upload alternative to the avatar reference URL and never blocks import.
+async function maybeUploadCharacter(projectId) {
+  const file = $("#characterFile").files[0];
+  if (!file) return;
+  showBusy("Attaching character image", "Storing the presenter reference with the project. No AI or video call.");
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const result = await api(`/import-character?project_id=${encodeURIComponent(projectId)}`, { method: "POST", body: form });
+    state.project.character_path = result.character_path;
+    $("#characterStatus").textContent = `Character image attached: ${file.name}`;
+  } catch (error) {
+    $("#characterStatus").textContent = `Character upload failed: ${error.message}`;
+  }
 }
 
 $("#importUrl").addEventListener("click", () => importSource("url"));
@@ -141,7 +161,7 @@ $("#selectAllSlides").addEventListener("click", () => {
 });
 $("#recommendedSlides").addEventListener("click", () => { state.selected = new Set(state.project.recommended_pages); renderSource(); });
 $("#approveSource").addEventListener("change", syncSelected);
-$("#toScript").addEventListener("click", () => { unlock(2); go(2); });
+$("#toScript").addEventListener("click", () => { unlock(2); go(2); createDraft(true); });
 
 function draftPayload() {
   return {
@@ -162,36 +182,86 @@ async function createDraft(ai) {
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 }
 
-$("#draftLocal").addEventListener("click", () => createDraft(false));
-$("#draftAi").addEventListener("click", () => createDraft(true));
+// Drafting is automatic: /draft-ai fires when the user continues from Step 01.
+// The draft-local / draft-ai choice buttons were removed with the manual Step 02 entry.
 
 function renderScript() {
   $("#scriptEmpty").classList.add("hidden");
   $("#scriptEditor").classList.remove("hidden");
   $("#scriptTitle").value = state.script.title;
-  $("#scriptStatus").textContent = state.script.mode === "openai" ? "OpenAI draft · verify facts" : "Local extraction · edit required";
+  $("#scriptStatus").textContent = state.script.mode === "openai" ? "OpenAI draft · verify facts" : "Local extraction · review required";
   $("#scriptSections").innerHTML = state.script.sections.map((section, index) => `
     <article class="script-section" data-index="${index}">
       <div class="source-tag">SLIDE ${section.page}</div>
-      <textarea aria-label="Narration for slide ${section.page}">${escapeHtml(section.narration)}</textarea>
+      <div class="narration-text">${escapeHtml(section.narration)}</div>
       <div class="duration-box">SECONDS<input type="number" min="5" max="15" value="${section.duration_s}"></div>
+      <button class="regen-btn" data-index="${index}">Regenerate</button>
     </article>`).join("");
   $$(".script-section").forEach(card => {
     const index = Number(card.dataset.index);
-    $("textarea", card).addEventListener("input", event => { state.script.sections[index].narration = event.target.value; syncRuntime(); });
     $("input", card).addEventListener("input", event => { state.script.sections[index].duration_s = Number(event.target.value); syncRuntime(); });
+    $(".regen-btn", card).addEventListener("click", () => toggleRegenForm(card, index));
   });
   syncRuntime();
 }
 
+function toggleRegenForm(card, index) {
+  const existing = $(".regen-form", card);
+  if (existing) { existing.remove(); return; }
+  const form = document.createElement("div");
+  form.className = "regen-form";
+  form.innerHTML = `<input type="text" placeholder="e.g. Focus more on part A instead of B" aria-label="Adjustment instruction"><button class="button primary">Regenerate section</button>`;
+  card.appendChild(form);
+  const input = $("input[type=text]", form);
+  input.focus();
+  $("button", form).addEventListener("click", () => regenerateSection(index, input.value.trim(), card));
+  input.addEventListener("keydown", event => { if (event.key === "Enter") regenerateSection(index, input.value.trim(), card); });
+}
+
+async function regenerateSection(index, instruction, card) {
+  if (!instruction) { notice("Enter an instruction describing how to adjust this section.", true); return; }
+  showBusy("Regenerating section", "One OpenAI call to rewrite this section based on your instruction.");
+  try {
+    const data = await jsonPost("/regenerate-section", {
+      project_id: state.project.project_id,
+      section_index: index,
+      instruction,
+      language: $("#language").value.trim() || "English",
+    });
+    state.script.sections[index] = data.section;
+    renderScript();
+    notice(`Section for slide ${data.section.page} regenerated.`);
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+}
+
+const MAX_RUNTIME_SECONDS = 90;
+
 function syncRuntime() {
   const total = state.script.sections.reduce((sum, section) => sum + Number(section.duration_s || 0), 0);
   $("#runtimeReadout").textContent = `${total} sec`;
+  syncScriptGate(total);
 }
 
-$("#approveScript").addEventListener("change", event => $("#toScenes").disabled = !event.target.checked);
+// Continue is allowed only when the script is approved AND total runtime fits the 90s budget.
+function syncScriptGate(total) {
+  if (total == null) {
+    total = state.script ? state.script.sections.reduce((sum, section) => sum + Number(section.duration_s || 0), 0) : 0;
+  }
+  const tooLong = total > MAX_RUNTIME_SECONDS;
+  $("#runtimeReadout").classList.toggle("over-limit", tooLong);
+  const warning = $("#lengthWarning");
+  warning.classList.toggle("hidden", !tooLong);
+  if (tooLong) {
+    warning.textContent = `Total runtime is ${total} sec — it must be ${MAX_RUNTIME_SECONDS} seconds or less. Shorten section durations before continuing.`;
+  }
+  $("#toScenes").disabled = !$("#approveScript").checked || tooLong;
+}
+
+$("#approveScript").addEventListener("change", () => syncScriptGate());
 $("#toScenes").addEventListener("click", () => {
   state.script.title = $("#scriptTitle").value.trim();
+  // Step 03 is automated and never shown: scenes are built verbatim from the approved script,
+  // then the flow jumps straight into Step 04 (source visuals).
   state.scenes = state.script.sections.map((section, index) => ({
     id: `scene_${String(index + 1).padStart(2, "0")}`,
     page: section.page,
@@ -200,41 +270,20 @@ $("#toScenes").addEventListener("click", () => {
     prompt: section.visual_direction || "A professional presenter stands to the left of a large display, speaking to camera and naturally gesturing toward the approved source visual on the right. Preserve the source visual faithfully and keep all labels legible.",
     crop_path: "",
   }));
-  renderScenes();
-  unlock(3);
-  go(3);
+  enterCrops();
 });
 
-function renderScenes() {
-  $("#sceneCount").textContent = state.scenes.length;
-  $("#sceneRuntime").textContent = `${state.scenes.reduce((sum, scene) => sum + scene.duration_s, 0)}s`;
-  $("#sceneList").innerHTML = state.scenes.map((scene, index) => `
-    <article class="scene-card" data-index="${index}">
-      <div class="scene-number"><b>${String(index + 1).padStart(2, "0")}</b><span>SLIDE ${scene.page}</span><span>${scene.duration_s} SEC</span></div>
-      <div><label>Narration</label><textarea class="scene-narration">${escapeHtml(scene.narration)}</textarea></div>
-      <div><label>Avatar & display direction</label><textarea class="scene-prompt">${escapeHtml(scene.prompt)}</textarea></div>
-    </article>`).join("");
-  $$(".scene-card").forEach(card => {
-    const scene = state.scenes[Number(card.dataset.index)];
-    $(".scene-narration", card).addEventListener("input", event => scene.narration = event.target.value);
-    $(".scene-prompt", card).addEventListener("input", event => scene.prompt = event.target.value);
-  });
-}
-
-$("#approveScenes").addEventListener("change", event => $("#toCrops").disabled = !event.target.checked);
-$("#toCrops").addEventListener("click", () => {
-  state.visualChoices.clear();
-  state.visualSelected.clear();
-  state.crops.clear();
-  state.cropResults.clear();
-  $("#visualChoiceGrid").classList.add("hidden");
-  $("#visualSelectionEmpty").classList.remove("hidden");
-  $("#cropWorkspace").classList.add("hidden");
-  $("#cropStatus").textContent = "Visual selection required";
-  syncVisualSelection();
+// enterCrops() is the Step 04 entry. It used to sit behind the (now hidden) Step 03
+// "Review source visuals" button; the automated script step calls it directly.
+function enterCrops() {
   unlock(4);
   go(4);
-});
+  // Step 04A is automated: use the deterministic scene-linked slides (no LLM call),
+  // then immediately confirm so the user lands straight in the crop workspace.
+  // The "Use scene-linked slides" / "Select with OpenAI" buttons remain for manual overrides.
+  useSceneSlides({ announce: false });
+  confirmVisuals();
+}
 
 function slideByPage(page) { return state.project.slides.find(slide => slide.page === page); }
 
@@ -275,7 +324,7 @@ function renderVisualChoices() {
   syncVisualSelection();
 }
 
-$("#useSceneSlides").addEventListener("click", () => {
+function useSceneSlides({ announce = true } = {}) {
   const grouped = new Map();
   state.scenes.forEach(scene => {
     const existing = grouped.get(scene.page) || {
@@ -291,29 +340,12 @@ $("#useSceneSlides").addEventListener("click", () => {
   state.visualSelected = new Set(grouped.keys());
   invalidateVisualConfirmation();
   renderVisualChoices();
-  notice("Scene-linked slides loaded as a manual starting point. Review them before confirming.");
-});
+  if (announce) notice("Scene-linked slides loaded as a manual starting point. Review them before confirming.");
+}
 
-$("#selectVisualsAi").addEventListener("click", async () => {
-  showBusy("Selecting the best source slides", `Comparing ${state.selected.size} approved slides with ${state.scenes.length} scenes in one OpenAI call. No images or video are generated.`);
-  try {
-    const data = await jsonPost("/select-visuals", {
-      project_id: state.project.project_id,
-      candidate_pages: [...state.selected].sort((a, b) => a - b),
-      scenes: state.scenes.map(({ id, page, narration, prompt }) => ({ id, page, narration, prompt })),
-      max_visuals: Math.min(8, Math.max(1, state.scenes.length)),
-    });
-    state.visualChoices = new Map(data.choices.map(choice => [choice.page, choice]));
-    state.visualSelected = new Set(data.choices.map(choice => choice.page));
-    invalidateVisualConfirmation();
-    renderVisualChoices();
-    $("#cropStatus").textContent = `${data.choices.length} AI-selected slides · review required`;
-    notice(`OpenAI selected ${data.choices.length} visual slides from ${data.candidate_count} candidates. Review the shortlist before cropping.`);
-  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
-});
-
-$("#confirmVisuals").addEventListener("click", () => {
+async function confirmVisuals() {
   const pages = [...state.visualSelected];
+  if (pages.length < 1) return;
   state.crops.clear();
   state.cropResults.clear();
   pages.forEach(page => state.crops.set(page, { page, x: .08, y: .10, width: .84, height: .80, label: state.visualChoices.get(page)?.label || "Source visual" }));
@@ -321,12 +353,17 @@ $("#confirmVisuals").addEventListener("click", () => {
     const mapped = [...state.visualChoices.values()].find(choice => state.visualSelected.has(choice.page) && choice.scene_ids?.includes(scene.id));
     scene.visual_page = mapped?.page || (state.visualSelected.has(scene.page) ? scene.page : pages[0]);
   });
-  $("#cropCallText").textContent = `${state.crops.size} image-analysis call${state.crops.size === 1 ? "" : "s"} if you request AI crop boxes. No video generation.`;
+  $("#cropCallText").textContent = `Crops are detected and rendered automatically on confirm. Re-run or adjust any box below, then re-render.`;
   $("#cropWorkspace").classList.remove("hidden");
   $("#cropStatus").textContent = `${state.crops.size} visual slides confirmed`;
   renderCrops();
   $("#cropWorkspace").scrollIntoView({ behavior: "smooth", block: "start" });
-});
+  // Automate the first pass: detect figure crops, then render previews, so the user
+  // lands on finished results. The buttons remain for manual re-runs after adjustments.
+  await runAutoCrops();
+  await runRenderCrops();
+}
+$("#confirmVisuals").addEventListener("click", confirmVisuals);
 
 function renderCrops() {
   const pages = [...state.crops.keys()];
@@ -363,20 +400,39 @@ function updateCropBox(card, crop) {
   box.style.height = `${Math.min(crop.height, 1 - crop.y) * 100}%`;
 }
 
-$("#suggestCrops").addEventListener("click", async () => {
+async function runAutoCrops() {
   const pages = [...state.crops.keys()];
-  showBusy("Finding source visuals", `${pages.length} explicit OpenAI analysis call${pages.length === 1 ? "" : "s"}; no video calls.`);
+  // narration gives the model context for "what matters" on multi-figure slides
+  const scenes = state.scenes
+    .filter(scene => pages.includes(scene.visual_page || scene.page))
+    .map(scene => ({ page: scene.visual_page || scene.page, narration: scene.narration }));
+  showBusy("Auto-detecting crops", "Reading exact figure coordinates from the PDF; OpenAI only picks a region on slides with more than one figure.");
   try {
-    const data = await jsonPost("/suggest-crops", { project_id: state.project.project_id, pages });
-    data.suggestions.forEach(item => state.crops.set(item.page, item));
+    const data = await jsonPost("/auto-crops", { project_id: state.project.project_id, pages, scenes });
+    let boxed = 0;
+    const empty = [];
+    data.suggestions.forEach(item => {
+      if (item.width != null) {
+        state.crops.set(item.page, {
+          page: item.page, x: item.x, y: item.y, width: item.width, height: item.height,
+          label: item.label || slideByPage(item.page)?.title || "Source visual",
+        });
+        boxed += 1;
+      } else {
+        state.crops.delete(item.page);
+        empty.push(item.page);
+      }
+    });
     state.cropResults.clear();
     renderCrops();
-    $("#cropStatus").textContent = `${data.calls} AI suggestions · review required`;
-    notice("Crop suggestions received. Adjust every box and render previews before approval.");
+    $("#cropStatus").textContent = `${boxed} auto crop${boxed === 1 ? "" : "s"} · ${data.calls} AI call${data.calls === 1 ? "" : "s"} · review required`;
+    const tail = empty.length ? ` No standalone figure on slide${empty.length === 1 ? "" : "s"} ${empty.join(", ")} — adjust those manually.` : "";
+    notice(`Auto-detected ${boxed} crop box${boxed === 1 ? "" : "es"} (${data.calls} paid AI call${data.calls === 1 ? "" : "s"}, only for multi-figure slides).${tail} Adjust and render previews before approval.`);
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
-});
+}
+$("#autoCrops").addEventListener("click", runAutoCrops);
 
-$("#renderCrops").addEventListener("click", async () => {
+async function runRenderCrops() {
   showBusy("Rendering crop previews", "Cropping the original PDF locally; no AI call.");
   try {
     const crops = [...state.crops.values()].map(crop => ({
@@ -390,7 +446,8 @@ $("#renderCrops").addEventListener("click", async () => {
     $("#cropStatus").textContent = `${data.crops.length} previews rendered`;
     notice("Source crops rendered from the original PDF. Inspect legibility before approval.");
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
-});
+}
+$("#renderCrops").addEventListener("click", runRenderCrops);
 
 function syncCropApproval() {
   const ready = $("#approveCrops").checked && state.cropResults.size === state.crops.size && state.crops.size > 0;
@@ -400,23 +457,153 @@ function syncCropApproval() {
 $("#approveCrops").addEventListener("change", syncCropApproval);
 
 $("#toPreflight").addEventListener("click", async () => {
-  showBusy("Preparing the locked preflight", "Writing the review manifest only. No Kie task will be submitted.");
+  state.scenes.forEach(scene => scene.crop_path = state.cropResults.get(scene.visual_page || scene.page)?.crop_path || "");
+  unlock(5);
+  go(5);
+});
+
+// --- Step 05: Character generation (kie.ai Nano Banana) ---
+
+async function generateCharacterFromScript() {
+  showBusy("Generating character", "OpenAI analyses the script, then kie.ai generates a presenter image. This may take a minute.");
   try {
-    state.scenes.forEach(scene => scene.crop_path = state.cropResults.get(scene.visual_page || scene.page)?.crop_path || "");
+    const data = await jsonPost("/generate-character", { project_id: state.project.project_id });
+    state.project.character_path = data.character_path;
+    showCharacterPreview(data.character_url, data.character_prompt, data.credits_consumed);
+    notice(`Character generated (${data.credits_consumed ?? "?"} credits). Review it and adjust if needed.`);
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+}
+
+async function regenerateCharacterWithPrompt() {
+  const userPrompt = $("#characterRegenPrompt").value.trim();
+  if (!userPrompt) { notice("Enter a prompt describing how to adjust the character.", true); return; }
+  showBusy("Regenerating character", "Editing the previous image with your prompt via kie.ai. This may take a minute.");
+  try {
+    const data = await jsonPost("/regenerate-character", { project_id: state.project.project_id, prompt: userPrompt });
+    state.project.character_path = data.character_path;
+    showCharacterPreview(data.character_url, null, data.credits_consumed);
+    notice(`Character regenerated (${data.credits_consumed ?? "?"} credits). Review the result.`);
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+}
+
+function showCharacterPreview(url, prompt, credits) {
+  const img = $("#characterPreviewImg");
+  img.src = `${url}?v=${Date.now()}`;
+  img.classList.remove("hidden");
+  $("#characterPlaceholder").classList.add("hidden");
+  if (prompt) {
+    $("#characterPromptText").textContent = `Prompt: ${prompt}`;
+    $("#characterPromptText").classList.remove("hidden");
+  }
+  if (credits != null) {
+    $("#characterCredits").textContent = `Credits consumed: ${credits}`;
+    $("#characterCredits").classList.remove("hidden");
+  }
+  $("#characterRegenPanel").classList.remove("hidden");
+  $("#characterGenStatus").textContent = "Generated · review required";
+  $("#approveCharacter").checked = false;
+  syncCharacterApproval();
+}
+
+function syncCharacterApproval() {
+  const hasImage = !$("#characterPreviewImg").classList.contains("hidden");
+  $("#toPreflightFromChar").disabled = !$("#approveCharacter").checked || !hasImage;
+}
+
+$("#generateCharacter").addEventListener("click", generateCharacterFromScript);
+$("#regenerateCharacter").addEventListener("click", regenerateCharacterWithPrompt);
+$("#characterRegenPrompt").addEventListener("keydown", event => { if (event.key === "Enter") regenerateCharacterWithPrompt(); });
+$("#approveCharacter").addEventListener("change", syncCharacterApproval);
+
+$("#toPreflightFromChar").addEventListener("click", async () => {
+  showBusy("Preparing preflight", "Writing the review manifest. No kie.ai task is submitted until you click Generate.");
+  try {
     const manifest = await jsonPost("/preflight", {
       project_id: state.project.project_id,
       avatar_url: $("#avatarUrl").value.trim(),
       scenes: state.scenes,
     });
+    manifest._contract = videoContract();
     $("#manifestJson").textContent = JSON.stringify(manifest, null, 2);
     const first = [...state.cropResults.values()][0];
     if (first) {
       $("#finalCropPreview").src = first.url;
       $("#displayPlaceholder").classList.add("hidden");
     }
-    unlock(5);
-    go(5);
+    renderGeneration();
+    unlock(6);
+    go(6);
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+});
+
+// --- Step 06 video generation (live, paid kie.ai Seedance jobs) ---
+function renderGeneration() {
+  $("#genList").innerHTML = state.scenes.map((scene, index) => {
+    const crop = state.cropResults.get(scene.visual_page || scene.page);
+    const video = state.videos.get(scene.id);
+    const preview = video
+      ? `<video src="${video.url}?v=${Date.now()}" controls preload="metadata"></video>`
+      : (crop ? `<img src="${crop.url}" alt="Reference for scene ${index + 1}">` : "No reference crop");
+    const meta = video
+      ? `Generated · ${video.credits ?? "?"} credits${video.composited === false ? " · no composite" : ""}`
+      : `Slide ${scene.page} · ${scene.duration_s}s`;
+    return `<article class="gen-card" data-scene="${scene.id}">
+      <div class="gen-media">${preview}</div>
+      <div class="gen-info"><h4>Scene ${String(index + 1).padStart(2, "0")}</h4><p>${escapeHtml(scene.narration.slice(0, 140))}</p><small>${escapeHtml(meta)}</small></div>
+      <button class="button secondary gen-one" data-scene="${scene.id}">${video ? "Regenerate" : "Generate"}</button>
+    </article>`;
+  }).join("");
+  $$(".gen-one").forEach(button => button.addEventListener("click", () => {
+    const scene = state.scenes.find(item => item.id === button.dataset.scene);
+    if (scene) generateOne(scene);
+  }));
+}
+
+function videoContract() {
+  return {
+    model: $("#specModel").value,
+    resolution: $("#specResolution").value,
+    aspect_ratio: $("#specAspect").value,
+    duration_s: Math.max(4, Math.min(15, Number($("#specDuration").value) || 8)),
+    generate_audio: $("#specAudio").value === "true",
+  };
+}
+
+async function generateOne(scene) {
+  const contract = videoContract();
+  showBusy(`Generating scene ${scene.id}`, "Live kie.ai Seedance job — uploading references, generating with green-screen, then compositing the slide. This can take a few minutes.");
+  try {
+    const data = await jsonPost("/generate-scene", {
+      project_id: state.project.project_id,
+      scene_id: scene.id,
+      prompt: scene.prompt,
+      narration: scene.narration,
+      crop_path: scene.crop_path || "",
+      duration_s: contract.duration_s,
+      aspect_ratio: contract.aspect_ratio,
+      resolution: contract.resolution,
+      generate_audio: contract.generate_audio,
+      model: contract.model,
+    });
+    state.videos.set(scene.id, { url: data.url, credits: data.credits_consumed, taskId: data.task_id, composited: data.composited });
+    renderGeneration();
+    notice(`Scene ${scene.id} generated (${data.credits_consumed ?? "?"} credits).`);
+    return true;
+  } catch (error) {
+    notice(`Scene ${scene.id} failed: ${error.message}`, true);
+    return false;
+  } finally { hideBusy(); }
+}
+
+$("#generateAll").addEventListener("click", async () => {
+  const total = state.scenes.length;
+  let done = 0, failed = 0;
+  for (const scene of state.scenes) {
+    $("#genStatus").textContent = `Generating scene ${done + failed + 1} of ${total}…`;
+    const ok = await generateOne(scene);
+    if (ok) done += 1; else failed += 1;
+  }
+  $("#genStatus").textContent = `Done: ${done} generated${failed ? `, ${failed} failed` : ""} of ${total}.`;
 });
 
 function escapeHtml(value) {

@@ -5,16 +5,12 @@
 _jobs/
 _cache/
 
-# generated run outputs — videos/images, too heavy for the repo
-_storage/atlas_storyboard/
+# all storage (generated outputs, libraries, uploads) — not tracked
+_storage/
 bench/_storage/
 
 # local SCORM test extraction, not source
 atlas_scorm2004_test/
-
-# the libraries below are source assets, keep them tracked
-!_storage/character_library/
-!_storage/audio_library/
 
 # python
 __pycache__/
