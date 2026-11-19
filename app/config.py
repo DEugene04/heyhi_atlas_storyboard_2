@@ -15,6 +15,7 @@ load_dotenv() runs on import so .env is available everywhere.
 
 import os
 from google import genai
+from google.genai import types as genai_types
 from dotenv import load_dotenv
 from typing import Protocol
 from dataclasses import dataclass
@@ -66,7 +67,9 @@ def make_client(api_key_env: str = "HEYHI_GEMINI_API_KEY"):
     key = os.environ.get(api_key_env)
     if not key:
         raise RuntimeError(f"{api_key_env} not set in environment")
-    return genai.Client(api_key=key)
+    # Pinned: JSON mode, Veo and Lyria need v1beta, and newer SDKs default to v1.
+    return genai.Client(
+        api_key=key, http_options=genai_types.HttpOptions(api_version="v1beta"))
 
 
 def make_openai_client(api_key_env: str = "OPENAI_API_KEY"):

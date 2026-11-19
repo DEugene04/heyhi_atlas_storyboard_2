@@ -26,7 +26,7 @@ pydantic>=2.7                # v2 only: model_validate / model_dump / ConfigDict
 python-dotenv>=1.0
 
 # --- providers -------------------------------------------------------------
-google-genai>=1.0            # director, Gemini image, Veo, Lyria, diarization
+google-genai>=1.0,<3        # director, Gemini image, Veo, Lyria, diarization
 openai>=2.0                  # PDF review: script, visual selection, crop analysis
 elevenlabs>=1.0              # speech-to-speech + paginated voice list
 azure-cognitiveservices-speech>=1.37   # only needed for tts_provider="azure"
