@@ -30,7 +30,7 @@ google-genai>=1.0            # director, Gemini image, Veo, Lyria, diarization
 openai>=2.0                  # PDF review: script, visual selection, crop analysis
 elevenlabs>=1.0              # speech-to-speech + paginated voice list
 azure-cognitiveservices-speech>=1.37   # only needed for tts_provider="azure"
-requests>=2.31               # kie.ai client only (video_provider="kieai")
+requests>=2.31               # MiniMax H3 GPU-server client + kie.ai image client
 
 # --- media -----------------------------------------------------------------
 Pillow>=10.0                 # boxed subtitles + cartoon title glyph metrics
@@ -66,3 +66,6 @@ PyMuPDF>=1.24,<2.0           # PDF review: 2.0 auto-loads an unrelated layout mo
 #   * voices.search() response shape — sts_elevenlabs_client._get() tolerates
 #     both objects and dicts BECAUSE this has already changed once.
 # Verify all of the above on the first live run after any upgrade.
+opencv-python-headless>=4.8  # PDF review: chroma-key composite of the slide crop onto the green panel
+numpy>=1.26                  # used with OpenCV in app/utils/chroma_composite.py
+# faster-whisper             # OPTIONAL: only for diarizer="whisper" (imported lazily); not installed by default

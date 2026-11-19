@@ -29,7 +29,7 @@
       <div class="rail-note">
         <span class="lock-icon">⌁</span>
         <strong>Generation is human-gated</strong>
-        <p>No kie.ai Seedance task runs until you click Generate at Step 06. Each scene is one paid job.</p>
+        <p>No MiniMax H3 job runs until you click Generate at Step 06. Scenes render on the company GPU server.</p>
       </div>
     </aside>
 
@@ -43,7 +43,7 @@
         <div class="target-card">
           <span>Target output</span>
           <strong id="heroDuration">75 sec</strong>
-          <small>Seedance 2.0 · 480p · 16:9</small>
+          <small>MiniMax H3 · 768p · 16:9</small>
         </div>
       </section>
 
@@ -166,7 +166,7 @@
 
       <section class="stage" data-stage="6">
         <div class="stage-head">
-          <div><span class="stage-kicker">Step 06</span><h2>Generation preflight</h2><p>Inspect the exact plan, then generate scenes with kie.ai Seedance 2.5. Each scene is one live, paid job.</p></div>
+          <div><span class="stage-kicker">Step 06</span><h2>Generation preflight</h2><p>Inspect the exact plan, then generate scenes with MiniMax H3 on the company GPU server. Each scene is one long-running job.</p></div>
           <span class="status-chip safe">Reviewed · ready to generate</span>
         </div>
         <div class="preflight-grid">
@@ -177,13 +177,13 @@
           <div class="panel spec-card">
             <h3>Video request contract</h3>
             <div class="spec-form">
-              <div class="spec-row"><label for="specProvider">Provider</label><span>kie.ai (jobs API)</span></div>
-              <div class="spec-row"><label for="specModel">Model</label><select id="specModel"><option value="bytedance/seedance-2-mini" selected>Seedance 2.0 Mini</option><option value="bytedance/seedance-2-5">Seedance 2.5</option></select></div>
+              <div class="spec-row"><label for="specProvider">Provider</label><span>Company GPU · MiniMax H3</span></div>
+              <div class="spec-row"><label for="specModel">Model</label><span>MiniMax H3</span></div>
               <div class="spec-row"><label for="specMode">Mode</label><span>reference (green-screen + composite)</span></div>
-              <div class="spec-row"><label for="specResolution">Resolution</label><select id="specResolution"><option value="480p" selected>480p</option><option value="720p">720p</option><option value="1080p">1080p</option></select></div>
+              <div class="spec-row"><label for="specResolution">Resolution</label><span>768p · 24 fps</span></div>
               <div class="spec-row"><label for="specAspect">Aspect ratio</label><select id="specAspect"><option value="16:9" selected>16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option></select></div>
               <div class="spec-row"><label for="specDuration">Duration (sec)</label><input id="specDuration" type="number" min="4" max="15" value="8"></div>
-              <div class="spec-row"><label for="specAudio">Generate audio</label><select id="specAudio"><option value="true" selected>On</option><option value="false">Off</option></select></div>
+              <div class="spec-row"><label for="specAudio">Audio</label><span>Generated with the video</span></div>
             </div>
           </div>
         </div>
@@ -191,9 +191,11 @@
         <details class="manifest"><summary>View preflight manifest</summary><pre id="manifestJson">Preparing manifest…</pre></details>
         <div class="generation-panel">
           <div class="gen-head">
-            <div><strong>Generate video · kie.ai Seedance 2.5</strong><p id="genCostNote">Each scene is one live, paid kie.ai job — real credits are spent and the scene crop + character image are uploaded to kie.ai. Generate scenes individually, or all at once.</p></div>
+            <div><strong>Generate video · MiniMax H3</strong><p id="genCostNote">Each scene uses GPU time on the company server; reference images stay on the private network. Generate scenes individually, or all at once.</p></div>
             <button id="generateAll" class="button primary">Generate all scenes</button>
           </div>
+          <div class="field"><label for="backgroundSelect">Background reference <em>optional · from the shared image library</em></label><select id="backgroundSelect"><option value="">None</option></select></div>
+          <div class="field"><label for="referenceVideoSelect">Reference video <em>optional · from the shared video library · slows each clip</em></label><select id="referenceVideoSelect"><option value="">None</option></select></div>
           <div id="genStatus" class="gen-status"></div>
           <div id="genList" class="gen-list"></div>
         </div>

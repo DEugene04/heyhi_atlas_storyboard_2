@@ -34,7 +34,7 @@ endpoint, each reading what the previous one left on disk.
                               blueprint.json (placeholders resolved)
                                        │
                        ┌───────────────▼─────────────────┐
-                       │  L4  ASSETS                     │  Gemini 2.5 Flash Image
+                       │  L4  ASSETS                     │  OpenAI gpt-image-2    
                        │      pipeline/image_gen.py      │
                        └───────────────┬─────────────────┘
                                        │
@@ -112,13 +112,13 @@ app/
     external_tts.py    L6        Azure path: TTS per phrase + diarize + align
     sts_elevenlabs.py  L6        ElevenLabs path: voice conversion (DEFAULT)
     audio_providers.py L6        provider registry + voice resolution
-    video_providers.py L5        provider registry (gemini | kieai)
+    video_providers.py L5        provider registry (minimax_h3 | gemini)
     music_gen.py       L7        read music_style, call Lyria, write track.mp3
     renderer.py        L8        merge, title, transitions, subtitles, music mix
 
   clients/                       every external API boundary lives here
     video_veo_client.py          Veo via google-genai; VeoJobSpec; cost estimate
-    video_kieai_client.py        Veo via kie.ai — TESTING ONLY, opt-in
+    video_minimax_h3_client.py   MiniMax H3 on the company GPU (sd-server, over Tailscale)
     tts_azure_client.py          Azure Speech -> 24kHz mono WAV
     sts_elevenlabs_client.py     ElevenLabs STS + paginated voice list
     music_lyria_client.py        Lyria via google-genai
@@ -147,7 +147,7 @@ network.
 | Provider                    | Called from                                           | Cost per run                                    |
 | --------------------------- | ----------------------------------------------------- | ----------------------------------------------- |
 | Gemini 2.5 Flash (director) | `director.GeminiDirector.complete`                    | 1 call per attempt, up to `max_retries + 1`     |
-| Gemini 2.5 Flash Image      | `image_gen.GeminiImageClient.generate`                | 1 per background + 1 per storyboard (+ retries) |
+| OpenAI gpt-image-2          | `image_gen.OpenAIImageClient.generate`                | 1 per background + 1 per storyboard (+ retries) |
 | Veo 3.1 Fast / Lite         | `video_veo_client.GeminiVeoClient.generate`           | 1 per scene                                     |
 | ElevenLabs STS              | `sts_elevenlabs_client.ElevenLabsSTSClient.convert`   | 1 per speaking scene                            |
 | Azure TTS                   | `tts_azure_client.AzureTTSClient.tts`                 | 1 **per phrase** per speaking scene             |

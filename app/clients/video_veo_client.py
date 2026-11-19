@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -42,6 +43,8 @@ class VeoJobSpec:
     image: bytes | None = None             # seed for image-to-video
     references: list[bytes] = field(default_factory=list)  # for reference-to-video
     safety: str = "Allow (Adult only)"
+    reference_video: Path | None = None    # H3 only: motion/look reference clip
+    seed: int | None = None                # H3 only: fixed seed (None = random, logged)
 
 
 class VeoClient(Protocol):

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas Studio</title>
+  <link rel="stylesheet" href="/studio/ui/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Atlas home"><span class="brand-mark">A</span><span><strong>Atlas</strong><small>Studio · default pipeline</small></span></a>
+    <div class="run-pill" id="runPill">No run selected</div>
+  </header>
+
+  <div class="shell">
+    <aside class="rail">
+      <p class="rail-label">Workflow</p>
+      <nav id="stepNav" aria-label="Pipeline steps"></nav>
+      <div class="cost-card">
+        <span>Spend so far</span>
+        <strong id="costTotal">—</strong>
+        <small id="costNote">Select a run to see its cost.</small>
+      </div>
+    </aside>
+
+    <main>
+      <div id="notice" class="notice hidden" role="status"></div>
+
+      <!-- Step 1 is static so typed values survive re-renders. -->
+      <section class="stage" data-stage="1">
+        <div class="stage-head"><div><span class="stage-kicker">Step 01</span><h2>Config and source</h2><p>Describe the video and attach a UTF-8 .txt source (max 50 MB). This creates a new run.</p></div></div>
+
+        <div class="panel">
+          <div class="field"><label for="runPicker">Continue a previous run</label>
+            <div class="input-action"><select id="runPicker"></select><button id="openRun" class="button secondary">Open run</button></div>
+          </div>
+        </div>
+
+        <div class="panel" id="newRunPanel">
+          <h3>New run</h3>
+          <div class="form-grid">
+            <div class="field"><label for="cfgLanguage">Language</label><input id="cfgLanguage" value="English"></div>
+            <div class="field"><label for="cfgAudience">Audience</label><input id="cfgAudience" placeholder="e.g. new hires in customer support"></div>
+            <div class="field"><label for="cfgDepth">Depth</label><select id="cfgDepth"><option value="standard">Standard</option><option value="deep dive">Deep dive</option></select></div>
+            <div class="field"><label for="cfgType">Video type</label><select id="cfgType"><option value="opening">Opening</option><option value="summary">Summary</option></select></div>
+            <div class="field"><label for="cfgStyle">Visual style</label><select id="cfgStyle">
+              <option value="realistic realism art style">Realism</option>
+              <option value="semi-realism art style">Semi-realism</option>
+              <option value="cartoon modern 2d art style">Cartoon</option>
+            </select></div>
+            <div class="field"><label>Aspect ratio</label><input value="16:9" disabled></div>
+            <div class="field span-2"><label for="cfgObjective">Objective</label><textarea id="cfgObjective" rows="2" placeholder="What should this video achieve?"></textarea></div>
+            <div class="field span-2"><label for="cfgFile">Source (.txt)</label><input id="cfgFile" type="file" accept=".txt,text/plain"></div>
+          </div>
+          <div class="approval-bar"><span class="muted">Free: saves the config and uploads the file.</span><button id="createRun" class="button primary">Create run →</button></div>
+        </div>
+      </section>
+
+      <section class="stage" data-stage="2"><div id="stage2"></div></section>
+      <section class="stage" data-stage="3"><div id="stage3"></div></section>
+      <section class="stage" data-stage="4"><div id="stage4"></div></section>
+      <section class="stage" data-stage="5"><div id="stage5"></div></section>
+      <section class="stage" data-stage="6"><div id="stage6"></div></section>
+      <section class="stage" data-stage="7"><div id="stage7"></div></section>
+    </main>
+  </div>
+
+  <div id="busy" class="busy hidden" role="alertdialog" aria-live="assertive"><div class="busy-card"><div class="spinner"></div><h3 id="busyTitle"></h3><p id="busyText"></p></div></div>
+  <script src="/studio/ui/app.js"></script>
+</body>
+</html>

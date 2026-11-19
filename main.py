@@ -14,8 +14,17 @@ Endpoints
   POST /pipeline/music      L7  generate the background bed (Lyria)          [network+credits]
   POST /pipeline/render     L8  merge + title + transitions + subs + music   [local ffmpeg]
 
+  GET  /pipeline/status     run progress derived from files (free; safe to poll)
+  GET  /pipeline/runs       run directories, newest first
+  GET  /pipeline/blueprint  blueprint.json (+ placeholder snapshot after select)
+  GET  /pipeline/files/{run_id}/{path}   run artifacts (png/mp4/mp3/wav/srt)
+  GET  /pipeline/characters/{id}/image   library character image
+  GET  /pipeline/audios/{id}/sample      library voice sample
+
+  GET  /                    landing page: Default (/studio/) vs Presentation
+  GET  /studio/             UI for the default /pipeline/* API
   GET  /pdf-review/         review-first PDF prototype; intentionally stops
-                            at a locked Seedance preflight manifest
+                            at a locked MiniMax H3 preflight manifest
 
 THE RUN IS THE STATE
 There is no database. A run_id names a directory under STORAGE_ROOT, and every
@@ -72,8 +81,9 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
-from app.config import make_client
+from app.config import make_client, make_openai_client
 from app.clients.video_veo_client import VeoError, retry_backoff_from_env
 from app.clients.tts_azure_client import TTSError
 from app.clients.sts_elevenlabs_client import STSError, ElevenLabsSTSClient
@@ -92,7 +102,10 @@ from app.schemas import (
 from app.libraries import CharacterEntry, load_audio_index, load_character_index
 
 from app.pipeline.patch_blueprint import patch_run, PatchError
-from app.pdf_review import router as pdf_review_router
+from app.pdf_review import (
+    IMAGE_LIBRARY_ROOT, VIDEO_LIBRARY_ROOT, _safe_child, router as pdf_review_router,
+)
+from app.studio_ui import landing_router, router as studio_router
 
 # storage root is env-overridable so tests/prod never share a tree
 STORAGE_ROOT = Path(
@@ -116,6 +129,10 @@ app = FastAPI(title="Atlas Pipeline - Layer 1", version="1.0")
 # Review-only PDF workflow. Its final generation control is intentionally
 # locked; the existing text-to-video endpoints remain unchanged.
 app.include_router(pdf_review_router)
+
+# Landing page (mode picker) at / and the default-API front-end at /studio/.
+app.include_router(landing_router)
+app.include_router(studio_router)
 
 def _run_dir(run_id: str, must_exist: bool = True) -> Path:
     """Resolve a run_id to its directory. Shape check + containment check (never
@@ -150,6 +167,164 @@ def run_cost(run_id: str) -> dict:
     """
     from app.costs import summarize
     return {"run_id": run_id, **summarize(_run_dir(run_id))}
+
+# ----------------------------------------------------------------------
+# Read-only views for the front-end. FREE: no network, no credits.
+# ----------------------------------------------------------------------
+# The write endpoints above can start every stage but cannot show anything. These
+# derive everything from file existence — the same rule as the 409 checks — so
+# there is still no database and no state beyond the run directory.
+_SERVABLE_SUFFIXES = {".png", ".jpg", ".jpeg", ".mp4", ".mp3", ".wav", ".srt"}
+
+
+def _read_json(path: Path) -> dict | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _count(d: Path, pattern: str) -> int:
+    return sum(1 for _ in d.glob(pattern)) if d.is_dir() else 0
+
+
+def _run_status(d: Path) -> dict:
+    """Where a run is, from which stage files exist. Mirrors the precondition
+    checks of the endpoints above, so 'selected' means /pipeline/assets will
+    accept the run, and so on."""
+    from app.pipeline.external_tts import scene_is_done
+
+    bp = _read_json(d / "blueprint.json")
+    scenes = []
+    for sc in (bp or {}).get("scenes", []):
+        sid = sc["id"]
+        speaking = sc.get("type") == "video-with-audio"
+        scenes.append({
+            "id": sid,
+            "type": sc.get("type"),
+            "topic": sc.get("topic"),
+            "raw": (d / "veo_raw" / f"{sid}.mp4").is_file(),
+            # a speaking scene is only finished once L6 wrote its marker; the
+            # working copy in scenes/ exists earlier, before the voice is laid on
+            "ready": scene_is_done(d, sid) if speaking
+                     else (d / "scenes" / f"{sid}.mp4").is_file(),
+        })
+
+    flags = {
+        "config": (d / "config.json").is_file(),
+        "source": (d / "source.txt").is_file(),
+        "blueprint": bp is not None,
+        "selected": (d / "selections.json").is_file(),
+        "music": (d / "music_bg" / "track.mp3").is_file(),
+        "final": (d / "final.mp4").is_file(),
+    }
+    ready = sum(1 for s in scenes if s["ready"])
+    # furthest stage reached, in pipeline order
+    stage = "new"
+    for name, reached in (
+        ("config", flags["config"]), ("source", flags["source"]),
+        ("blueprint", flags["blueprint"]), ("selected", flags["selected"]),
+        ("assets", _count(d / "backgrounds", "*.png") > 0),
+        ("scenes", bool(scenes) and ready == len(scenes)),
+        ("final", flags["final"]),
+    ):
+        if reached:
+            stage = name
+    return {
+        "run_id": d.name,
+        "stage": stage,
+        **flags,
+        "title": (bp or {}).get("title"),
+        "backgrounds": _count(d / "backgrounds", "*.png"),
+        "storyboards": _count(d / "storyboard", "*.png"),
+        "veo_raw": _count(d / "veo_raw", "*.mp4"),
+        "scenes_ready": ready,
+        "scenes_total": len(scenes),
+        "scene_states": scenes,
+    }
+
+
+@app.get("/pipeline/status")
+def run_status(run_id: str) -> dict:
+    """Progress of one run, derived from files only. Safe to poll while a
+    billable POST is still open: handlers are plain `def`, so they run in the
+    threadpool and this is served concurrently."""
+    return _run_status(_run_dir(run_id))
+
+
+@app.get("/pipeline/runs")
+def list_runs() -> list[dict]:
+    """Every run directory, newest first. Directories that are not runs are ignored."""
+    if not STORAGE_ROOT.is_dir():
+        return []
+    runs = [p for p in STORAGE_ROOT.iterdir() if p.is_dir() and _RUN_ID_RE.match(p.name)]
+    runs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    out = []
+    for p in runs:
+        st = _run_status(p)
+        out.append({"run_id": p.name, "stage": st["stage"], "title": st["title"],
+                    "updated": int(p.stat().st_mtime)})
+    return out
+
+
+@app.get("/pipeline/blueprint")
+def get_blueprint(run_id: str) -> dict:
+    """blueprint.json, plus the pre-select snapshot (placeholder ids) once
+    /pipeline/select has run. The UI needs the placeholders to build its picker."""
+    d = _run_dir(run_id)
+    bp = _read_json(d / "blueprint.json")
+    if bp is None:
+        raise HTTPException(409, "blueprint.json not found - run director first")
+    return {"run_id": run_id, "blueprint": bp,
+            "placeholder": _read_json(d / "blueprint.placeholder.json")}
+
+
+def _contained_file(root: Path, relative: str) -> Path:
+    """Resolve `relative` under `root` or fail. Containment is checked on the
+    resolved path, so '..' segments and symlinks pointing outside are refused."""
+    target = (root / relative).resolve()
+    try:
+        target.relative_to(root.resolve())
+    except ValueError:
+        raise HTTPException(400, "path escapes its directory")
+    if target.suffix.lower() not in _SERVABLE_SUFFIXES:
+        raise HTTPException(404, "file type not served")
+    if not target.is_file():
+        raise HTTPException(404, "file not found")
+    return target
+
+
+@app.get("/pipeline/files/{run_id}/{relative_path:path}")
+def run_file(run_id: str, relative_path: str) -> FileResponse:
+    """A generated artifact of a run: backgrounds, storyboards, scene clips,
+    music, subtitles, final.mp4."""
+    return FileResponse(_contained_file(_run_dir(run_id), relative_path))
+
+
+@app.get("/pipeline/characters/{char_id}/image")
+def character_image(char_id: str) -> FileResponse:
+    try:
+        entries = load_character_index(CHAR_LIB_ROOT)
+    except FileNotFoundError:
+        raise HTTPException(503, "character library not initialized")
+    entry = next((e for e in entries if e.char_id == char_id), None)
+    if entry is None:
+        raise HTTPException(404, f"unknown char_id '{char_id}'")
+    return FileResponse(_contained_file(CHAR_LIB_ROOT, entry.image_path))
+
+
+@app.get("/pipeline/audios/{audio_id}/sample")
+def audio_sample(audio_id: str) -> FileResponse:
+    """Voice sample for the `index` voice source (ElevenLabs voices carry their
+    own preview_url instead)."""
+    try:
+        entries = load_audio_index(AUDIO_LIB_ROOT)
+    except FileNotFoundError:
+        raise HTTPException(503, "audio library not initialized")
+    entry = next((e for e in entries if e.audio_id == audio_id), None)
+    if entry is None:
+        raise HTTPException(404, f"unknown audio_id '{audio_id}'")
+    return FileResponse(_contained_file(AUDIO_LIB_ROOT, entry.sample_path))
 
 # ----------------------------------------------------------------------
 # Layer 1 - Source + Config
@@ -212,11 +387,11 @@ async def upload_source(
 # ----------------------------------------------------------------------
 
 def _director_llm(*, use_schema: bool = True):
-    """Seam: build the networked Gemini director. Imported lazily so the API
+    """Seam: build the networked OpenAI (GPT-4o) director. Imported lazily so the API
     starts without the key; tests override this to avoid any live call.
     Keyword-only, so a stub can be `lambda **kw: fake` and ignore the flag."""
-    from app.pipeline.director import GeminiDirector
-    return GeminiDirector(make_client(), use_schema=use_schema)
+    from app.pipeline.director import OpenAIDirector
+    return OpenAIDirector(make_openai_client(), use_schema=use_schema)
  
  
 @app.post("/pipeline/direct", response_model=DirectOut)
@@ -259,8 +434,8 @@ def run_director(body: DirectIn) -> DirectOut:
         # they belong to ended up usable, so wasted spend can be totalled.
         from app.costs import record_tokens
         for i, usage in enumerate(getattr(llm, "usage_log", []) or []):
-            record_tokens(d, layer="L2",
-                          model=getattr(llm, "model", "gemini-2.5-flash"),
+            record_tokens(d, layer="L2", provider="openai",
+                          model=getattr(llm, "model", "gpt-4o"),
                           usage=usage, attempt=i + 1,
                           director_outcome="ok" if ok else "failed")
  
@@ -339,8 +514,12 @@ def select(sel: SelectIn) -> SelectOut:
         except FileNotFoundError:
             raise HTTPException(503, "audio library not initialized")
  
-    # placeholders the director actually emitted = union of scene.characters
-    bp = json.loads(bp_path.read_text(encoding="utf-8"))
+    # placeholders the director actually emitted = union of scene.characters.
+    # Once a selection has been applied blueprint.json holds RESOLVED library ids,
+    # so a second /select must read the pristine snapshot, or changing your mind
+    # would always be rejected as "missing placeholders".
+    pristine = d / "blueprint.placeholder.json"
+    bp = json.loads((pristine if pristine.is_file() else bp_path).read_text(encoding="utf-8"))
     expected: set[str] = set()
     for sc in bp.get("scenes", []):
         expected.update(sc.get("characters", []))
@@ -393,13 +572,13 @@ def select(sel: SelectIn) -> SelectOut:
     )
 
 # ----------------------------------------------------------------------
-# Layer 4 — asset generation (Gemini 2.5 Flash Image). NETWORK + CREDITS.
+# Layer 4 — asset generation (OpenAI gpt-image-2). NETWORK + CREDITS.
 # ----------------------------------------------------------------------
 def _image_client():
-    """Seam: build the networked Gemini image client. Lazily imported so the
+    """Seam: build the networked OpenAI image client. Lazily imported so the
     API starts without a key; tests override this to avoid any live call."""
-    from app.pipeline.image_gen import GeminiImageClient
-    return GeminiImageClient(make_client())
+    from app.pipeline.image_gen import OpenAIImageClient
+    return OpenAIImageClient(make_openai_client())
 
 
 def _check_force_resume(body) -> None:
@@ -449,7 +628,7 @@ def run_assets(body: AssetsIn) -> AssetsOut:
 # ----------------------------------------------------------------------
 # Layer 5 & 6 — scene generation (Veo) + TTS interleave. NETWORK + CREDITS.
 # ----------------------------------------------------------------------
-def _scene_clients(tts_provider: str, video_provider: str = "gemini",
+def _scene_clients(tts_provider: str, video_provider: str = "minimax_h3",
                    diarizer: str = "gemini"):
     """Seam: (veo, audio_provider). Lazily imported; tests override.
     One Gemini client serves the gemini Veo path and Gemini diarization; the
@@ -457,6 +636,16 @@ def _scene_clients(tts_provider: str, video_provider: str = "gemini",
     gemini = make_client()
     dia = DIARIZERS[diarizer](gemini)
     return VIDEO_PROVIDERS[video_provider](gemini), PROVIDERS[tts_provider](gemini, diarizer=dia)
+
+
+def _library_file(root: Path, name: str) -> Path | None:
+    """Resolve an optional file name inside a shared library, or None when unset."""
+    if not name:
+        return None
+    target = _safe_child(root, name)
+    if not target.is_file():
+        raise HTTPException(404, f"'{name}' not found in {root.name}")
+    return target
 
 
 @app.post("/pipeline/scenes", response_model=ScenesOut)
@@ -507,7 +696,13 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
     if problems:
         raise HTTPException(422, {"errors": problems})
 
-    gen = SceneGenerator(d, veo, backoff_s=retry_backoff_from_env())
+    if body.video_provider != "minimax_h3" and (body.background or body.reference_video):
+        raise HTTPException(422, "background / reference_video are only supported by video_provider='minimax_h3'")
+    bg = _library_file(IMAGE_LIBRARY_ROOT, body.background)
+    ref_video = _library_file(VIDEO_LIBRARY_ROOT, body.reference_video)
+
+    gen = SceneGenerator(d, veo, backoff_s=retry_backoff_from_env(),
+                         background=bg, reference_video=ref_video, seed=body.seed)
     try:
         if body.tts_only:
             paths = gen.rerender_tts(bp, voice_for=voice_for, audio=audio)

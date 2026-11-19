@@ -4,7 +4,7 @@
 REGRESSION GUARD. The first version of this instrumentation recorded tokens
 after direct() returned. When the director exhausted its retries it raised, the
 handler returned 502, and the recording line was never reached — so a run that
-burned (max_retries + 1) billed Gemini calls recorded nothing at all.
+burned (max_retries + 1) billed director calls recorded nothing at all.
 
 That is backwards. A failing director is the EXPENSIVE case: every attempt is a
 real, answered, billed API call; the only thing that failed was our own
@@ -26,10 +26,10 @@ from app.costs import load, summarize
 
 
 class FakeDirectorLLM:
-    """Stands in for GeminiDirector. Appends a usage entry per call, exactly as
+    """Stands in for OpenAIDirector. Appends a usage entry per call, exactly as
     the real client does, and returns whatever text it was configured with."""
 
-    model = "gemini-2.5-flash"
+    model = "gpt-4o"
 
     def __init__(self, reply: str):
         self.reply = reply
@@ -79,8 +79,8 @@ def test_failed_director_still_records_its_token_spend(client, tmp_path, monkeyp
     assert {r["director_outcome"] for r in records} == {"failed"}
     assert sorted({r["attempt"] for r in records}) == [1, 2, 3]
 
-    # 3 x (1000 in + 500 out) at $0.30/$2.50 per 1M
-    expected = 3 * (1000 * 0.30 + 500 * 2.50) / 1_000_000
+    # 3 x (1000 in + 500 out) at $2.50/$10.00 per 1M (gpt-4o)
+    expected = 3 * (1000 * 2.50 + 500 * 10.00) / 1_000_000
     assert summarize(tmp_path / run_id)["total_usd"] == pytest.approx(expected)
 
 

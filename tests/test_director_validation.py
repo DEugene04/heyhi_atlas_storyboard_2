@@ -366,3 +366,50 @@ def test_the_prompt_states_one_value_rather_than_offering_a_choice(cfg):
     line = next(l for l in system.splitlines() if '"aspect_ratio"' in l)
     assert cfg.aspect_ratio in line
     assert "|" not in line, f"still offering a choice: {line.strip()}"
+
+
+# ---------------------------------------------------------------- coverage
+def test_too_few_topics_is_a_problem(bp, cfg):
+    """A one-topic video for a long source was accepted before this rule."""
+    topics = {s.topic for s in bp.scenes if s.type == "video-with-audio"}
+    assert has(validate_blueprint(bp, cfg, min_topics=len(topics) + 1), "coverage")
+    assert not has(validate_blueprint(bp, cfg, min_topics=len(topics)), "coverage")
+
+
+def test_topic_bounds_scale_with_depth_and_source_length():
+    from app.pipeline.director import topic_bounds
+    long_src = "word " * 5000
+    assert topic_bounds("standard", long_src) == (3, 5)
+    assert topic_bounds("deep dive", long_src) == (4, 8)
+    assert topic_bounds("anything else", long_src) == (3, 5)
+    # a short source can't fill 3 topics: the floor shrinks, never below 1
+    assert topic_bounds("standard", "word " * 200) == (1, 5)
+    assert topic_bounds("deep dive", "") == (1, 8)
+
+
+def test_prompt_states_the_topic_range():
+    from app.config import DirectorConfig
+    from app.pipeline.director import build_director_prompt
+    system, _ = build_director_prompt("word " * 5000, DirectorConfig(depth="deep dive"))
+    assert "between 4 and 8 distinct topics" in system
+
+
+def test_direct_derives_character_count_instead_of_retrying(bp_dict, cfg):
+    """GPT-4o declares the wrong character_count and repeats it after feedback.
+    direct() computes it from the scenes, so a miscount costs no retry."""
+    import json
+    from app.pipeline.director import direct
+
+    bp_dict["character_count"] = 99
+
+    class OneShot:
+        calls = 0
+        def complete(self, system, user):
+            OneShot.calls += 1
+            return json.dumps(bp_dict)
+
+    src = "word " * 5000
+    out = direct(src, cfg, OneShot(), max_retries=0)
+    used = {c for s in out.scenes for c in s.characters}
+    assert out.character_count == len(used)
+    assert OneShot.calls == 1

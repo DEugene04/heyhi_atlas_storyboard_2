@@ -283,3 +283,21 @@ def test_music_resume_keeps_the_existing_track(client):
     body = r.json()
     assert body["reused"] is True and body["regenerated"] is False
     assert (d / "music_bg" / "track.mp3").read_bytes() == b"ID3 existing"
+
+
+def test_library_background_video_and_seed_reach_reference_scenes_only(tmp_path):
+    """H3 extras ride on reference-to-video scenes; image-to-video keeps its first frame."""
+    (tmp_path / "storyboard").mkdir()
+    (tmp_path / "storyboard" / "sb1.png").write_bytes(b"sb")
+    bg, vid = tmp_path / "bg.png", tmp_path / "ref.mp4"
+    bg.write_bytes(b"bg"); vid.write_bytes(b"v")
+    gen = SceneGenerator(tmp_path, CountingVeo(), background=bg,
+                         reference_video=vid, seed=7)
+    scene = {"id": "s1", "task": "reference-to-video", "model": "Veo 3.1 Fast",
+             "type": "video-with-audio", "text": "hi", "prompt": "p",
+             "reference_from": "storyboard:sb1", "aspect_ratio": "16:9"}
+    spec = gen.build_spec(scene)
+    assert spec.references == [b"sb", b"bg"]
+    assert spec.reference_video == vid and spec.seed == 7
+    assert "<Picture 2>" in spec.prompt
+    assert spec.prompt.index("<Picture 2>") < spec.prompt.index("Audio sync")

@@ -312,7 +312,11 @@ class ScenesIn(BaseModel):
     resume: bool = False          # keep clips already in veo_raw/; generate the rest
     tts_only: bool = False        # reuse veo_raw/ clips; re-run L6 only (no Veo)
     tts_provider: Literal["azure", "elevenlabs"] = "elevenlabs"
-    video_provider: Literal["gemini", "kieai"] = "gemini"   # kieai = testing-only
+    video_provider: Literal["minimax_h3", "gemini"] = "minimax_h3"   # gemini = legacy Veo
+    # H3 only. File names inside the shared _storage/image_library and video_library.
+    background: str = ""
+    reference_video: str = ""
+    seed: int | None = Field(None, ge=0, lt=2**31)
     # Provides word timings for subtitles. Gemini is billed per scene; Whisper runs
     # locally but requires the optional dependency. See docs/open-questions.md #16.
     diarizer: Literal["gemini", "whisper"] = "gemini"

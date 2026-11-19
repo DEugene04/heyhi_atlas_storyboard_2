@@ -79,13 +79,17 @@ was then trimmed to 1s. Billing from the blueprint length would report $0.05 —
 Note the raw files come back at exactly 4.000 / 8.000, so there is no fractional
 drift to worry about, and the measured number matches whole-second billing.
 
+### Company GPU (MiniMax H3)
+
+**No per-call charge.** H3 runs on the company's own GPU server, so `scene_gen`
+logs each clip's generated seconds as `provider="local-gpu"`, `priced=False`:
+visible in the cost log, but not counted in the run total and not flagged as an
+undercount. Set a rate in `PRICING["minimax-h3"]` if GPU time should be costed.
+
 ### kie.ai
 
-**$0.005 per credit.** kie reports its balance, so `scene_gen` reads it before
-and after each call and bills the **measured** delta. No estimation involved.
-
-For reference, kie's per-video pricing is $0.30 (Fast) / $0.15 (Lite) for any
-length — but the credit delta is ground truth and is what gets recorded.
+**$0.005 per credit**, used only for PDF-review character images (Nano Banana).
+The image client reports `credits_consumed` per call.
 
 ## Layer 6 — Audio
 

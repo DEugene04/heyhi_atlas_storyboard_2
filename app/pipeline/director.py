@@ -8,7 +8,7 @@ Pipeline:
         ↓
     build_director_prompt()
         ↓
-    Gemini Director
+    OpenAI Director (GPT-4o)
         ↓
     parse_blueprint()
         ↓
@@ -93,7 +93,7 @@ AI RULES (HIGHEST PRIORITY — Veo has empirically failed these; be strict):
     - newly introduced object or character
     - intentional environmental changes
     Do NOT rewrite the entire scene as if it were a standalone image prompt. Treat the continuation prompt as an edit to the previous frame, not a replacement.
-    For continuation scenes, the "Style & Ambience" field MUST NOT repeat inherited visual descriptions such as lighting, blur, camera framing, or atmosphere. If there are no intentional visual changes, simply state: "Consistent with previous frame"
+    For continuation scenes, the "Style & Ambience" field MUST NOT repeat inherited visual descriptions such as lighting, blur, camera framing, or atmosphere. If there are no intentional visual changes, write exactly: "Consistent with previous frame, wordless illustration; all surfaces smooth and blank; no signage, no writing, no text, no labels, or numerical characters visible on any object, wall, or background." The wordless clause of AI RULE #3 is the ONE thing that is never dropped, even on a continuation scene.
 
    7. STYLE IS APPENDED DOWNSTREAM, NOT AUTHORED HERE. The asset-generation
      layer prepends the top-level "style" fragment to every image prompt
@@ -269,7 +269,8 @@ B-ROLL CONTINUITY:
       * Subject: the existing held frame; introduce nothing new.
       * Action: ONLY the settle into stillness ("the camera holds; the
         moment freezes").
-      * Style and Ambience: exactly "Consistent with previous frame".
+      * Style and Ambience: "Consistent with previous frame" followed by the
+        verbatim wordless clause of AI RULE #3 (never omitted).
       * Do NOT restate inherited environment, lighting, or composition.
 
   OPENING B-Roll  (broll_role = "opening")
@@ -307,6 +308,14 @@ OUTPUT LANGUAGE — applies to every scene's "text"
   image prompts stay in ENGLISH, because they instruct Veo and the image
   model, not the viewer. Only "text" and "title" are audience-facing.
 
+COVERAGE  (how much of the SOURCE the video must teach)
+- Produce between %(min_topics)d and %(max_topics)d distinct topics, each a
+  different part of the SOURCE, taken in the order the SOURCE presents them.
+- Each topic has 2-4 video-with-audio scenes and ends with a closing B-Roll.
+- Do NOT stop after the first section. OBJECTIVE words like "most important"
+  or "crucial" choose WHICH parts to keep, never how few topics to write.
+  If the SOURCE is short, cover all of it.
+
 TIMELINE RULES OF THUMB:
 - Open with a short B-Roll (broll_role="opening").
 - Video-with-audio: <= %(max_words)d words IN %(language)s, references
@@ -319,6 +328,20 @@ TIMELINE RULES OF THUMB:
 Return ONLY the JSON object. No prose, no markdown fences."""
 
 
+# Topics per video, by depth. The ceiling is advice to the model; the floor is
+# enforced by validate_blueprint so a one-topic video is retried, not accepted.
+TOPIC_BOUNDS = {"standard": (3, 5), "deep dive": (4, 8)}
+WORDS_PER_TOPIC = 150      # a source shorter than this per topic cannot fill it
+
+
+def topic_bounds(depth: str, source_text: str) -> tuple[int, int]:
+    """(min_topics, max_topics) for this run. The floor shrinks for a short
+    source, so a one-paragraph document is never asked for topics it lacks."""
+    lo, hi = TOPIC_BOUNDS.get((depth or "").strip().lower(), TOPIC_BOUNDS["standard"])
+    available = max(1, len(source_text.split()) // WORDS_PER_TOPIC)
+    return min(lo, available), hi
+
+
 def build_director_prompt(source_text: str, config: DirectorConfig) -> tuple[str, str]:
     """
     Build the system and user prompts for the Director LLM.
@@ -327,6 +350,7 @@ def build_director_prompt(source_text: str, config: DirectorConfig) -> tuple[str
     contains only the source document. Keeping them separate improves prompt
     caching and prevents the source text from being interpreted as instructions.
     """
+    min_topics, max_topics = topic_bounds(config.depth, source_text)
     max_words = int(config.words_per_second * config.max_scene_seconds)
     min_words = int(config.words_per_second * config.min_scene_seconds)
     system = DIRECTOR_RULES % {
@@ -338,6 +362,8 @@ def build_director_prompt(source_text: str, config: DirectorConfig) -> tuple[str
         "broll_s": config.broll_length_seconds,
         "aspect": config.aspect_ratio,
         "language": config.language,
+        "min_topics": min_topics,
+        "max_topics": max_topics,
     }
     # LANGUAGE is spelled out as an instruction, not left as a bare label.
     system += (
@@ -490,7 +516,8 @@ def check_output_language(bp: VideoBlueprint, language: str) -> list[str]:
     ]
 
 
-def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig) -> list[str]:
+def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
+                       min_topics: int = 1) -> list[str]:
     """
     Validate rules that cannot be expressed by the Pydantic schema.
 
@@ -499,6 +526,16 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig) -> list[str]:
     """
     problems: list[str] = []
     max_words = int(config.words_per_second * config.max_scene_seconds)
+
+    # --- coverage: enough distinct topics ---
+    n_topics = len({sc.topic for sc in bp.scenes
+                    if sc.type == "video-with-audio" and sc.topic})
+    if n_topics < min_topics:
+        problems.append(
+            f"coverage: only {n_topics} topic(s) but this source needs at least "
+            f"{min_topics}. Cover more of the SOURCE in order — add topics, each "
+            f"with 2-4 video-with-audio scenes and a closing B-Roll."
+        )
 
     # --- narration is in the requested language ---
     problems.extend(check_output_language(bp, config.language))
@@ -851,13 +888,18 @@ def direct(
     correct its previous output.
     """
     system, user = build_director_prompt(source_text, config)
+    min_topics, _ = topic_bounds(config.depth, source_text)
     note = ""
     last_err = "unknown"
     for _ in range(max_retries + 1):
         raw = llm.complete(system + note, user)
         try:
             bp = parse_blueprint(raw)
-            problems = validate_blueprint(bp, config)
+            # character_count is derived data: the distinct char_ids the scenes
+            # use. GPT-4o miscounts it and repeats the miscount after feedback,
+            # burning a paid retry on a number we can compute exactly.
+            bp.character_count = len({c for sc in bp.scenes for c in sc.characters})
+            problems = validate_blueprint(bp, config, min_topics)
             if not problems:
                 return bp
             last_err = "; ".join(problems)
@@ -878,18 +920,18 @@ def direct(
 
 
 # ----------------------------------------------------------------------
-# Gemini
+# OpenAI
 # ----------------------------------------------------------------------
-class GeminiDirector:
+class OpenAIDirector:
     """
-    Gemini implementation of DirectorLLM.
+    OpenAI (GPT-4o) implementation of DirectorLLM.
 
-    Optionally enables Gemini's response schema, which guarantees valid JSON
+    Optionally enables OpenAI structured outputs, which guarantees valid JSON
     structure but does not replace semantic validation.
     """
 
     def __init__(
-        self, client, model: str = "gemini-2.5-flash", use_schema: bool = True,
+        self, client, model: str = "gpt-4o", use_schema: bool = True,
     ):
         self.client = client
         self.model = model
@@ -906,22 +948,28 @@ class GeminiDirector:
         self.usage_log: list[dict] = []
 
     def complete(self, system: str, user: str) -> str:
-        from google.genai import types
-        # There is no separate system-instruction slot here: system and user are
-        # passed as two ordinary content parts (see direct(), which appends the
-        # retry feedback to the system half). Low-but-nonzero temperature —
-        # the prompts need some variety, the structure does not.
-        cfg = types.GenerateContentConfig(
-            response_mime_type="application/json", temperature=0.4
-        )
+        # Low-but-nonzero temperature — the prompts need some variety, the
+        # structure does not. direct() appends retry feedback to the system half.
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
         if self.use_schema:
-            cfg.response_schema = VideoBlueprint
-        resp = self.client.models.generate_content(
-            model=self.model, contents=[system, user], config=cfg,
-        )
+            resp = self.client.chat.completions.parse(
+                model=self.model, messages=messages, temperature=0.4,
+                response_format=VideoBlueprint,
+            )
+        else:
+            resp = self.client.chat.completions.create(
+                model=self.model, messages=messages, temperature=0.4,
+                response_format={"type": "json_object"},
+            )
         from app.costs import usage_from_response
         self.usage_log.append(usage_from_response(resp))
-        return resp.text
+        msg = resp.choices[0].message
+        if getattr(msg, "refusal", None):
+            raise RuntimeError(f"OpenAI refused: {msg.refusal}")
+        return msg.content
 
 
 # ----------------------------------------------------------------------

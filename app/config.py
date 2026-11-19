@@ -56,7 +56,7 @@ class DirectorLLM(Protocol):
     """Minimal interface the director needs: one text completion.
 
     Using a Protocol lets the director be unit-tested with stub LLMs instead of
-    the live Gemini implementation.
+    the live OpenAI implementation.
     """
     def complete(self, system: str, user: str) -> str: ...
 
@@ -67,3 +67,13 @@ def make_client(api_key_env: str = "HEYHI_GEMINI_API_KEY"):
     if not key:
         raise RuntimeError(f"{api_key_env} not set in environment")
     return genai.Client(api_key=key)
+
+
+def make_openai_client(api_key_env: str = "OPENAI_API_KEY"):
+    """Construct the OpenAI client from the environment (director, L2). Same
+    credential-edge rule as make_client: read here, never printed or persisted."""
+    key = os.environ.get(api_key_env)
+    if not key:
+        raise RuntimeError(f"{api_key_env} not set in environment")
+    from openai import OpenAI
+    return OpenAI(api_key=key)

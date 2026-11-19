@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas</title>
+<style>
+:root{--ink:#17211b;--muted:#66716a;--line:#dfe5df;--paper:#f7f8f4;--card:#fff;--green:#1d6b4f;--shadow:0 16px 50px rgba(23,33,27,.08)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink);font-family:Inter,"Segoe UI",Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px}
+h1{margin:0 0 6px;font-size:2rem}p.lead{margin:0 0 32px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;width:100%;max-width:760px}
+a.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+a.card:hover,a.card:focus-visible{transform:translateY(-3px);border-color:var(--green);outline:none}
+.card h2{margin:0 0 8px;color:var(--green)}.card p{margin:0;color:var(--muted);line-height:1.5}
+</style></head>
+<body>
+<h1>Atlas</h1><p class="lead">Choose how you want to make your video.</p>
+<div class="cards">
+  <a class="card" href="/studio/"><h2>Default</h2><p>Write or upload a text source, then direct, cast, generate and render a video step by step.</p></a>
+  <a class="card" href="/pdf-review/"><h2>Presentation</h2><p>Start from a PDF deck: review the script and source slides, then generate a presenter video.</p></a>
+</div>
+</body></html>
