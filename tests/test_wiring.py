@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 from app.pipeline.audio_providers import DIARIZERS, PROVIDERS
-from app.pipeline.director import GeminiDirector
+from app.pipeline.director import OpenAIDirector
 from app.pipeline.external_tts import GeminiDiarizer, WhisperDiarizer
 from app.schemas import DirectIn, ScenesIn, VideoBlueprint
 
@@ -23,42 +23,51 @@ from app.schemas import DirectIn, ScenesIn, VideoBlueprint
 # ---------------------------------------------------------------- #25 schema
 def test_use_schema_is_on_by_default():
     """Changed 2026-08-02. If this flips back, open-questions #25 should say why."""
-    assert GeminiDirector(client=None).use_schema is True
+    assert OpenAIDirector(client=None).use_schema is True
     assert DirectIn(run_id="run_abcdef12").use_schema is True
 
 
-def test_the_blueprint_model_converts_to_a_gemini_response_schema():
-    """The whole feature rests on google-genai being able to render
-    VideoBlueprint as a response schema. It is a nested model with enums,
-    optionals and a list of lists — none of that is guaranteed to survive, and
-    an SDK upgrade could break it. Fails loudly here rather than mid-run."""
-    types = pytest.importorskip("google.genai").types
-    cfg = types.GenerateContentConfig(
-        response_mime_type="application/json", response_schema=VideoBlueprint)
-    assert cfg.response_schema is not None
+def test_the_blueprint_model_converts_to_an_openai_strict_schema():
+    """The whole feature rests on the openai SDK being able to render
+    VideoBlueprint as a strict structured-output schema. Fails loudly here
+    rather than mid-run if an SDK upgrade or schema change breaks it."""
+    pytest.importorskip("openai")
+    from openai.lib._pydantic import to_strict_json_schema
+    assert to_strict_json_schema(VideoBlueprint)["type"] == "object"
 
 
 def test_director_passes_the_schema_only_when_asked():
-    """Pins the plumbing without a network call: a fake client captures the
-    config object the director built."""
+    """Pins the plumbing without a network call: a fake client records which
+    OpenAI entry point and response_format the director used."""
     captured = {}
 
-    class FakeModels:
-        def generate_content(self, *, model, contents, config):
-            captured["schema"] = getattr(config, "response_schema", None)
-            class R:
-                text = "{}"
-                usage_metadata = None
+    class R:
+        usage = None
+        class _C:
+            class message:
+                content = "{}"
+                refusal = None
+        choices = [_C]
+
+    class FakeCompletions:
+        def parse(self, **kw):
+            captured["parse"] = kw
+            return R()
+        def create(self, **kw):
+            captured["create"] = kw
             return R()
 
     class FakeClient:
-        models = FakeModels()
+        class chat:
+            completions = FakeCompletions()
 
-    GeminiDirector(FakeClient(), use_schema=False).complete("sys", "user")
-    assert captured["schema"] is None
+    OpenAIDirector(FakeClient(), use_schema=False).complete("sys", "user")
+    assert captured["create"]["response_format"] == {"type": "json_object"}
+    assert "parse" not in captured
 
-    GeminiDirector(FakeClient(), use_schema=True).complete("sys", "user")
-    assert captured["schema"] is VideoBlueprint
+    OpenAIDirector(FakeClient(), use_schema=True).complete("sys", "user")
+    assert captured["parse"]["response_format"] is VideoBlueprint
+    assert captured["parse"]["model"] == "gpt-4o"
 
 
 # ---------------------------------------------------------------- #16 diarizer

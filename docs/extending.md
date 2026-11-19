@@ -141,7 +141,7 @@ changing that function and probably namespacing the ids.
 
 ## Add a video provider
 
-The pattern is already established by kie.ai — copy it.
+The pattern is already established by the MiniMax H3 client — copy it.
 
 1. New module in `app/clients/`, implementing the `VeoClient` Protocol:
    `generate(spec: VeoJobSpec) -> bytes`.
@@ -166,11 +166,10 @@ Contract details worth getting right:
   for like the rest.
 - **Read your key at construction**, from the environment, in that client and nowhere
   else. Never log it.
-- **Surface parity gaps, don't silently map them.** `video_kieai_client.py`'s module
-  docstring is the model to follow: it documents that `spec.safety` is ignored, that
-  images must be uploaded to a third-party host because kie accepts URLs only, and
-  that the flow is async. That last point is a data-sovereignty decision, called out
-  as such.
+- **Surface parity gaps, don't silently map them.** `video_minimax_h3_client.py`'s module
+  docstring is the model to follow: it documents the task-to-endpoint mapping, the
+  async submit/poll flow, and the WebM-to-mp4 conversion. State where data goes: the
+  H3 client talks only to the company GPU server on the private network.
 
 ## Add an audio provider
 

@@ -24,7 +24,7 @@ Endpoints
   GET  /                    landing page: Default (/studio/) vs Presentation
   GET  /studio/             UI for the default /pipeline/* API
   GET  /pdf-review/         review-first PDF prototype; intentionally stops
-                            at a locked Seedance preflight manifest
+                            at a locked MiniMax H3 preflight manifest
 
 THE RUN IS THE STATE
 There is no database. A run_id names a directory under STORAGE_ROOT, and every
@@ -83,7 +83,7 @@ from typing import Literal
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from app.config import make_client
+from app.config import make_client, make_openai_client
 from app.clients.video_veo_client import VeoError, retry_backoff_from_env
 from app.clients.tts_azure_client import TTSError
 from app.clients.sts_elevenlabs_client import STSError, ElevenLabsSTSClient
@@ -102,7 +102,9 @@ from app.schemas import (
 from app.libraries import CharacterEntry, load_audio_index, load_character_index
 
 from app.pipeline.patch_blueprint import patch_run, PatchError
-from app.pdf_review import router as pdf_review_router
+from app.pdf_review import (
+    IMAGE_LIBRARY_ROOT, VIDEO_LIBRARY_ROOT, _safe_child, router as pdf_review_router,
+)
 from app.studio_ui import landing_router, router as studio_router
 
 # storage root is env-overridable so tests/prod never share a tree
@@ -385,11 +387,11 @@ async def upload_source(
 # ----------------------------------------------------------------------
 
 def _director_llm(*, use_schema: bool = True):
-    """Seam: build the networked Gemini director. Imported lazily so the API
+    """Seam: build the networked OpenAI (GPT-4o) director. Imported lazily so the API
     starts without the key; tests override this to avoid any live call.
     Keyword-only, so a stub can be `lambda **kw: fake` and ignore the flag."""
-    from app.pipeline.director import GeminiDirector
-    return GeminiDirector(make_client(), use_schema=use_schema)
+    from app.pipeline.director import OpenAIDirector
+    return OpenAIDirector(make_openai_client(), use_schema=use_schema)
  
  
 @app.post("/pipeline/direct", response_model=DirectOut)
@@ -432,8 +434,8 @@ def run_director(body: DirectIn) -> DirectOut:
         # they belong to ended up usable, so wasted spend can be totalled.
         from app.costs import record_tokens
         for i, usage in enumerate(getattr(llm, "usage_log", []) or []):
-            record_tokens(d, layer="L2",
-                          model=getattr(llm, "model", "gemini-2.5-flash"),
+            record_tokens(d, layer="L2", provider="openai",
+                          model=getattr(llm, "model", "gpt-4o"),
                           usage=usage, attempt=i + 1,
                           director_outcome="ok" if ok else "failed")
  
@@ -570,13 +572,13 @@ def select(sel: SelectIn) -> SelectOut:
     )
 
 # ----------------------------------------------------------------------
-# Layer 4 — asset generation (Gemini 2.5 Flash Image). NETWORK + CREDITS.
+# Layer 4 — asset generation (OpenAI gpt-image-2). NETWORK + CREDITS.
 # ----------------------------------------------------------------------
 def _image_client():
-    """Seam: build the networked Gemini image client. Lazily imported so the
+    """Seam: build the networked OpenAI image client. Lazily imported so the
     API starts without a key; tests override this to avoid any live call."""
-    from app.pipeline.image_gen import GeminiImageClient
-    return GeminiImageClient(make_client())
+    from app.pipeline.image_gen import OpenAIImageClient
+    return OpenAIImageClient(make_openai_client())
 
 
 def _check_force_resume(body) -> None:
@@ -626,7 +628,7 @@ def run_assets(body: AssetsIn) -> AssetsOut:
 # ----------------------------------------------------------------------
 # Layer 5 & 6 — scene generation (Veo) + TTS interleave. NETWORK + CREDITS.
 # ----------------------------------------------------------------------
-def _scene_clients(tts_provider: str, video_provider: str = "gemini",
+def _scene_clients(tts_provider: str, video_provider: str = "minimax_h3",
                    diarizer: str = "gemini"):
     """Seam: (veo, audio_provider). Lazily imported; tests override.
     One Gemini client serves the gemini Veo path and Gemini diarization; the
@@ -634,6 +636,16 @@ def _scene_clients(tts_provider: str, video_provider: str = "gemini",
     gemini = make_client()
     dia = DIARIZERS[diarizer](gemini)
     return VIDEO_PROVIDERS[video_provider](gemini), PROVIDERS[tts_provider](gemini, diarizer=dia)
+
+
+def _library_file(root: Path, name: str) -> Path | None:
+    """Resolve an optional file name inside a shared library, or None when unset."""
+    if not name:
+        return None
+    target = _safe_child(root, name)
+    if not target.is_file():
+        raise HTTPException(404, f"'{name}' not found in {root.name}")
+    return target
 
 
 @app.post("/pipeline/scenes", response_model=ScenesOut)
@@ -684,7 +696,13 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
     if problems:
         raise HTTPException(422, {"errors": problems})
 
-    gen = SceneGenerator(d, veo, backoff_s=retry_backoff_from_env())
+    if body.video_provider != "minimax_h3" and (body.background or body.reference_video):
+        raise HTTPException(422, "background / reference_video are only supported by video_provider='minimax_h3'")
+    bg = _library_file(IMAGE_LIBRARY_ROOT, body.background)
+    ref_video = _library_file(VIDEO_LIBRARY_ROOT, body.reference_video)
+
+    gen = SceneGenerator(d, veo, backoff_s=retry_backoff_from_env(),
+                         background=bg, reference_video=ref_video, seed=body.seed)
     try:
         if body.tts_only:
             paths = gen.rerender_tts(bp, voice_for=voice_for, audio=audio)

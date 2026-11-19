@@ -516,7 +516,7 @@ $("#characterRegenPrompt").addEventListener("keydown", event => { if (event.key 
 $("#approveCharacter").addEventListener("change", syncCharacterApproval);
 
 $("#toPreflightFromChar").addEventListener("click", async () => {
-  showBusy("Preparing preflight", "Writing the review manifest. No kie.ai task is submitted until you click Generate.");
+  showBusy("Preparing preflight", "Writing the review manifest. No H3 job is submitted until you click Generate.");
   try {
     const manifest = await jsonPost("/preflight", {
       project_id: state.project.project_id,
@@ -536,7 +536,7 @@ $("#toPreflightFromChar").addEventListener("click", async () => {
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 });
 
-// --- Step 06 video generation (live, paid kie.ai Seedance jobs) ---
+// --- Step 06 video generation (company GPU, MiniMax H3 jobs) ---
 function renderGeneration() {
   $("#genList").innerHTML = state.scenes.map((scene, index) => {
     const crop = state.cropResults.get(scene.visual_page || scene.page);
@@ -545,7 +545,7 @@ function renderGeneration() {
       ? `<video src="${video.url}?v=${Date.now()}" controls preload="metadata"></video>`
       : (crop ? `<img src="${crop.url}" alt="Reference for scene ${index + 1}">` : "No reference crop");
     const meta = video
-      ? `Generated · ${video.credits ?? "?"} credits${video.composited === false ? " · no composite" : ""}`
+      ? `Generated · ${video.task ?? "h3"}${video.composited === false ? " · no composite" : ""}`
       : `Slide ${scene.page} · ${scene.duration_s}s`;
     return `<article class="gen-card" data-scene="${scene.id}">
       <div class="gen-media">${preview}</div>
@@ -561,17 +561,14 @@ function renderGeneration() {
 
 function videoContract() {
   return {
-    model: $("#specModel").value,
-    resolution: $("#specResolution").value,
     aspect_ratio: $("#specAspect").value,
     duration_s: Math.max(4, Math.min(15, Number($("#specDuration").value) || 8)),
-    generate_audio: $("#specAudio").value === "true",
   };
 }
 
 async function generateOne(scene) {
   const contract = videoContract();
-  showBusy(`Generating scene ${scene.id}`, "Live kie.ai Seedance job — uploading references, generating with green-screen, then compositing the slide. This can take a few minutes.");
+  showBusy(`Generating scene ${scene.id}`, "MiniMax H3 job — generating with green-screen, then compositing the slide. This can take several minutes.");
   try {
     const data = await jsonPost("/generate-scene", {
       project_id: state.project.project_id,
@@ -581,19 +578,28 @@ async function generateOne(scene) {
       crop_path: scene.crop_path || "",
       duration_s: contract.duration_s,
       aspect_ratio: contract.aspect_ratio,
-      resolution: contract.resolution,
-      generate_audio: contract.generate_audio,
-      model: contract.model,
+      background: $("#backgroundSelect").value,
+      reference_video: $("#referenceVideoSelect").value,
     });
-    state.videos.set(scene.id, { url: data.url, credits: data.credits_consumed, taskId: data.task_id, composited: data.composited });
+    state.videos.set(scene.id, { url: data.url, task: data.task, jobId: data.job_id, composited: data.composited });
     renderGeneration();
-    notice(`Scene ${scene.id} generated (${data.credits_consumed ?? "?"} credits).`);
+    notice(`Scene ${scene.id} generated.`);
     return true;
   } catch (error) {
     notice(`Scene ${scene.id} failed: ${error.message}`, true);
     return false;
   } finally { hideBusy(); }
 }
+
+api("/backgrounds").then((d) => {
+  const select = $("#backgroundSelect");
+  for (const name of d.backgrounds) select.add(new Option(name, name));
+}).catch(() => {});
+
+api("/reference-videos").then((d) => {
+  const select = $("#referenceVideoSelect");
+  for (const name of d.reference_videos) select.add(new Option(name, name));
+}).catch(() => {});
 
 $("#generateAll").addEventListener("click", async () => {
   const total = state.scenes.length;

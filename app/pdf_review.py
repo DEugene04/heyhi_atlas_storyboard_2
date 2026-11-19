@@ -2,7 +2,7 @@
 
 This module deliberately stops before video generation. It imports a PDF,
 renders review thumbnails, extracts text, optionally asks OpenAI for a script
-or crop suggestions, and writes a Seedance preflight manifest for human review.
+or crop suggestions, and writes a MiniMax H3 preflight manifest for human review.
 """
 from __future__ import annotations
 
@@ -36,7 +36,14 @@ PROJECT_ROOT = Path(
     os.environ.get("ATLAS_PDF_REVIEW_ROOT", "_storage/pdf_review")
 ).resolve()
 
-VIDEO_REFERENCE_PATH = REPO_ROOT / "_storage" / "video_library" / "reference_video_2.mp4"
+# Shared reference images (backgrounds etc.), independent of any project.
+IMAGE_LIBRARY_ROOT = Path(
+    os.environ.get("ATLAS_IMAGE_LIBRARY_ROOT", "_storage/image_library")
+).resolve()
+
+VIDEO_LIBRARY_ROOT = Path(
+    os.environ.get("ATLAS_VIDEO_LIBRARY_ROOT", "_storage/video_library")
+).resolve()
 
 MAX_PDF_BYTES = 100 * 1024 * 1024
 MAX_PAGES = 250
@@ -166,11 +173,11 @@ class GenerateSceneIn(BaseModel):
     prompt: str = ""
     narration: str = ""
     crop_path: str = ""
-    duration_s: int = Field(8, ge=4, le=30)
+    duration_s: int = Field(8, ge=4, le=15)
     aspect_ratio: str = "16:9"
-    resolution: str = "480p"
-    generate_audio: bool = True
-    model: str = "bytedance/seedance-2-mini"
+    reference_video: str = ""   # file name in the shared video library
+    background: str = ""   # file name in the shared image library (not a project file)
+    seed: int | None = Field(None, ge=0, lt=2**31)   # None = random; logged either way
 
 
 class _AIScriptSection(BaseModel):
@@ -530,6 +537,28 @@ async def import_character(
         "character_path": relative,
         "character_url": f"/pdf-review/files/{project_id}/{relative}",
     }
+
+
+@router.get("/backgrounds")
+def list_backgrounds() -> dict[str, Any]:
+    """Image-library files that can be sent to the video model as a background reference."""
+    names = sorted(
+        p.name for p in IMAGE_LIBRARY_ROOT.glob("*")
+        if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+        and p.stem.lower().startswith("background")
+    ) if IMAGE_LIBRARY_ROOT.is_dir() else []
+    return {"backgrounds": names}
+
+
+@router.get("/reference-videos")
+def list_reference_videos() -> dict[str, Any]:
+    """Video-library files that can be sent to the video model as a reference video."""
+    names = sorted(
+        p.name for p in VIDEO_LIBRARY_ROOT.glob("*")
+        if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".webm", ".mkv"}
+        and p.stem.lower().startswith("reference")
+    ) if VIDEO_LIBRARY_ROOT.is_dir() else []
+    return {"reference_videos": names}
 
 
 @router.post("/draft-local")
@@ -1153,10 +1182,10 @@ def preflight(body: PreflightIn) -> dict[str, Any]:
         "project_id": body.project_id,
         "status": "human_review_complete_ready_to_generate",
         "video_generation_enabled": True,
-        "provider": "kie.ai",
-        "requested_product_name": "Seedance 2.0 Mini",
-        "verified_provider_model": "bytedance/seedance-2-mini",
-        "resolution": "480p",
+        "provider": "local-gpu",
+        "model": "minimax-h3 (company GPU, Ref2VA)",
+        "task": "reference-to-video (text-to-video when the project has no character image)",
+        "resolution": os.environ.get("ATLAS_H3_RESOLUTION", "480P"),
         "aspect_ratio": "16:9",
         "generate_audio": True,
         "avatar_url": body.avatar_url,
@@ -1164,9 +1193,10 @@ def preflight(body: PreflightIn) -> dict[str, Any]:
         "presenter_reference": character_url or body.avatar_url,
         "scenes": [scene.model_dump() for scene in body.scenes],
         "provider_note": (
-            "Generation runs per scene via kie.ai's jobs API (reference mode): the scene "
-            "crop and the project character are uploaded to kie.ai and composed by Seedance "
-            "2.0 mini. Each scene is one live, paid job triggered explicitly from the UI."
+            "Generation runs per scene on the company GPU server (MiniMax H3, "
+            "reference-to-video): the project character/background are sent as reference "
+            "images over the private network and the scene crop is composited afterwards. "
+            "No third party receives the frames; each scene is triggered explicitly from the UI."
         ),
     }
     atomic_write_text(project / "preflight.json", json.dumps(manifest, ensure_ascii=False, indent=2))
@@ -1306,66 +1336,68 @@ def regenerate_character(body: RegenerateCharacterIn) -> dict[str, Any]:
     }
 
 
-def _seedance_prompt(narration: str, has_character: bool) -> str:
-    """Assemble a green-screen Seedance prompt (mirrors bench/test_video_kieai.py).
+def _scene_prompt(narration: str, has_character: bool, has_background: bool = False) -> str:
+    """Assemble the green-screen scene prompt for MiniMax H3.
 
-    The model generates a presenter on the left and a solid chroma-key green
-    panel on the right. The actual slide is composited in post-processing.
+    References are tagged `<Picture N>` in request order (the server's documented
+    form), so the character is <Picture 1> and the optional background follows.
+
+    H3 has no negative-prompt branch, so every constraint is phrased as what
+    must appear. Speech goes in <d> tags with a speaker id; the slide is
+    composited later over the chroma-key panel.
     """
-    blocks = [
-        "A single corporate presenter stands on the LEFT third of the frame, turned "
-        "slightly toward the right, speaking to camera and gesturing toward a flat panel "
-        "on the RIGHT side of the frame as if explaining a graphic shown there.",
-    ]
-    if has_character:
-        blocks.append(
-            "The presenter MUST look exactly like the provided character reference image — "
-            "same face, hair, clothing, and build. Reproduce the character faithfully."
-        )
-    spoken = (narration or "").strip()
-    if spoken:
-        blocks.append(
-            f"SPOKEN LINE — STRICT: The presenter speaks the following line in English, and ONLY this line, with calm, clear, professional delivery and natural lip-sync: {f'\"{spoken}\"'}"
-        )
-    blocks.append(
-        "THE PANEL — STRICT: on the RIGHT side of the frame there is a large, flat, "
-        "rectangular panel filled with ONE solid, uniform chroma-key green (bright pure "
-        "green, like a green screen). It is a placeholder that will be replaced later, so "
-        "it must be perfectly keyable: a single even green with NO text, numbers, logos, "
-        "icons, charts, images, patterns, textures, gradients, shadows, highlights, "
-        "reflections, borders, or glare. Do NOT draw anything on it, do NOT add any "
-        "content, and do NOT vary its color across its surface. The panel is a flat "
-        "on-screen rectangle, not a 3D object and not a physical prop.\n\n"
-        "The presenter never overlaps, covers, or occludes the green panel. The panel "
-        "stays fixed in place, perfectly rectangular, and completely unchanged for the "
-        "entire clip — it does not move, scale, rotate, slide, or animate, and its edges "
-        "stay crisp and straight. Only the presenter moves: natural explanatory hand "
-        "gestures toward the panel, occasional glances at it and back to camera, subtle, "
-        "calm body movement.\n\n"
-        "Camera, STRICT: locked, static, eye-level medium-wide shot that keeps the "
-        "presenter on the left and the FULL green panel on the right in frame at all "
-        "times. No zoom, pan, tilt, dolly, push-in, orbit, handheld shake, or reframing. "
-        "One continuous static shot."
+    presenter = (
+        "The presenter from <Picture 1>, with exactly that face, hair, clothing and build"
+        if has_character
+        else "A single corporate presenter"
     )
-    return "\n\n".join(blocks)
+    spoken = (narration or "").strip().replace('"', "'")
+    scene = (
+        f"[Shot 1] A locked, static, eye-level medium-wide shot, one continuous take. "
+        f"{presenter} stands in the left third of the frame, angled slightly toward the right, "
+        "gesturing calmly toward a large flat rectangular panel that fills the right side of "
+        "the frame. The panel is one perfectly even, bright chroma-key green, like a green "
+        "screen: a flat on-screen rectangle with crisp straight edges, empty and "
+        "unchanging for the whole clip, never overlapped by the presenter. The presenter "
+        "glances at the panel and back to camera with subtle, relaxed body movement."
+    )
+    if spoken:
+        scene += (
+            " (S1) The presenter speaks to camera in calm, clear, professional English with "
+            f"natural lip-sync: <d>[en] {spoken}</d> After the line ends, the lips stay closed."
+        )
+    if has_background:
+        image_n = 2 if has_character else 1
+        scene += (
+            f" The room behind the presenter matches the environment in <Picture {image_n}>, "
+            "in the same colors, lighting and layout."
+        )
+    soundscape = "Quiet, clean room tone."
+    music = "N/A"
+    return (
+        f"integrated_multimodal_description: {scene}\n\n"
+        f"overall_soundscape: {soundscape}\n\n"
+        f"non_diegetic_music: {music}"
+    )
 
 
 @router.post("/generate-scene")
 def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
-    """Generate ONE scene's video via kie.ai Seedance (reference mode).
+    """Generate ONE scene's video with MiniMax H3 on the company GPU server.
 
-    LIVE, PAID call. Follows the bench/test_video_kieai.py flow:
-      1. Upload character (+ optional background) as reference images.
-      2. Generate with a green-screen prompt — the model renders a chroma-key
-         green panel on the right side of the frame.
+    Long-running job. Flow (same green-screen approach as before):
+      1. Send the character (+ optional background) as reference images
+         (ref2va; t2va when there are none).
+      2. Generate with a green-screen prompt - the model renders a chroma-key
+         green panel on the right side of the frame. H3 produces its own audio.
       3. Post-process: composite the scene's crop image onto the green panel
          using the chroma-key utility.
     """
     project, data = _load_project(body.project_id)
-    from app.clients.video_seedance_kieai_client import SeedanceError, SeedanceKieClient
+    from app.clients.video_minimax_h3_client import MinimaxH3Client, MinimaxH3Error
     from app.utils.chroma_composite import CHROMA_HUE_RANGE, CHROMA_SAT_MIN, CHROMA_VAL_MIN
 
-    # Reference images: character and optional background (NOT the slide crop —
+    # Reference images: character and optional background (NOT the slide crop -
     # the crop is composited in post-processing via chroma key).
     image_paths: list[Path] = []
     character_path = data.get("character_path")
@@ -1373,36 +1405,36 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
     if has_character:
         image_paths.append(project / character_path)
 
-    # Optional background reference image.
+    # Optional background reference, picked from the shared image library.
     bg_path: Path | None = None
-    bg_relative = data.get("background_path")
-    if bg_relative and (project / bg_relative).is_file():
-        bg_path = project / bg_relative
+    if body.background:
+        bg_path = _safe_child(IMAGE_LIBRARY_ROOT, body.background)
+        if not bg_path.is_file():
+            raise HTTPException(404, f"background not found in image library: {body.background}")
         image_paths.append(bg_path)
 
-    prompt = _seedance_prompt(body.narration, has_character)
+    video_path: Path | None = None
+    if body.reference_video:
+        video_path = _safe_child(VIDEO_LIBRARY_ROOT, body.reference_video)
+        if not video_path.is_file():
+            raise HTTPException(404, f"reference video not found in video library: {body.reference_video}")
 
-    video_ref_paths: list[Path] = [VIDEO_REFERENCE_PATH] if VIDEO_REFERENCE_PATH.is_file() else []
+    prompt = _scene_prompt(body.narration, has_character, bg_path is not None)
 
-    try:
-        client = SeedanceKieClient()
-    except SeedanceError as exc:
-        raise HTTPException(503, f"kie.ai is not configured: {exc}")
+    client = MinimaxH3Client()
     try:
         result = client.generate(
             prompt,
             image_paths,
+            reference_video=video_path,
             duration=body.duration_s,
             aspect_ratio=body.aspect_ratio,
-            resolution=body.resolution,
-            generate_audio=body.generate_audio,
-            model=body.model,
-            video_ref_paths=video_ref_paths or None,
+            seed=body.seed,
         )
-    except SeedanceError as exc:
+    except MinimaxH3Error as exc:
         raise HTTPException(502, f"video generation failed: {exc}")
     except requests.RequestException as exc:
-        raise HTTPException(502, f"kie.ai request failed: {exc}")
+        raise HTTPException(502, f"GPU server request failed: {exc}")
 
     (project / "videos").mkdir(parents=True, exist_ok=True)
     safe_id = re.sub(r"[^A-Za-z0-9_-]", "_", body.scene_id)[:64] or "scene"
@@ -1443,24 +1475,26 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
         "video_path": relative,
         "raw_video_path": raw_relative,
         "url": url,
-        "credits_consumed": result["credits_consumed"],
-        "task_id": result["task_id"],
+        "job_id": result["job_id"],
+        "seed": result["seed"],
+        "model": "minimax-h3",
+        "generation_seconds": result["generation_seconds"],
         "duration_s": body.duration_s,
         "composited": composited,
-        # Everything sent to the video model: `request` is the exact createTask
-        # body (model + prompt + settings + uploaded reference URLs).
+        # Everything sent to the video model: `request` is the submitted job body
+        # (prompt, size, frames, sampling) with the base64 images left out.
         "request": result["request"],
         "inputs": {
             "narration": body.narration,
             "has_character": has_character,
-            "reference_images": [str(p.relative_to(project)) for p in image_paths],
-            "reference_videos": [str(p) for p in video_ref_paths],
+            "reference_images": [str(p) for p in image_paths],
+            "reference_video": body.reference_video or None,
             "crop_path": body.crop_path,
         },
         "post_processing": {
             "chroma_composite": composited,
             "slide_crop": str(crop_file.relative_to(project)) if crop_file else None,
-            "background": bg_relative if bg_path else None,
+            "background": body.background or None,
             "chroma_hue_range": list(CHROMA_HUE_RANGE),
             "chroma_sat_min": CHROMA_SAT_MIN,
             "chroma_val_min": CHROMA_VAL_MIN,
@@ -1472,7 +1506,7 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
     return {
         "scene_id": body.scene_id,
         "url": url,
-        "credits_consumed": result["credits_consumed"],
-        "task_id": result["task_id"],
+        "job_id": result["job_id"],
+        "task": result["task"],
         "composited": composited,
     }

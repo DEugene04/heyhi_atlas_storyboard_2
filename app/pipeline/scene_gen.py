@@ -73,12 +73,17 @@ def _ref_id(reference_from: str) -> tuple[str, str]:
     return (prefix or "scene"), rid
 
 # Create the Veo prompt so we can evaluate it, for the time being
-def compose_veo_prompt(scene: dict) -> str:
-    """Build the final prompt sent to Veo.
+def compose_veo_prompt(scene: dict, background_picture: int | None = None) -> str:
+    """Build the final prompt sent to Veo / H3.
 
-    Speaking scenes append the dialogue so Veo generates matching mouth movement.
+    `background_picture` is the 1-based position of the shared-library background
+    among the request's reference images; H3 addresses references as `<Picture N>`.
+    Speaking scenes append the dialogue so the model generates matching mouth movement.
     """
     prompt = scene["prompt"]
+    if background_picture:
+        prompt = (f"{prompt} The environment matches <Picture {background_picture}>, "
+                  "in the same colors, lighting and layout.")
     if scene.get("type") == "video-with-audio":
         text = (scene.get("text") or "").strip()
         if text:
@@ -98,8 +103,16 @@ def veo_generation_seconds(scene: dict) -> float:
 # Convert scene from blueprint into mp4
 class SceneGenerator:
     def __init__(self, run_dir: str | Path, client: VeoClient,
-                 max_retries: int = 3, backoff_s: float = 2.0):
+                 max_retries: int = 3, backoff_s: float = 2.0,
+                 background: Path | None = None, reference_video: Path | None = None,
+                 seed: int | None = None):
         self.run = Path(run_dir)
+        # Shared-library extras (H3). Applied to reference-to-video scenes only:
+        # image-to-video scenes already carry a first frame, which H3 cannot combine
+        # with reference images or video.
+        self.background = background
+        self.reference_video = reference_video
+        self.seed = seed
         self.client = client
         self.max_retries = max_retries
         self.backoff_s = backoff_s
@@ -135,14 +148,21 @@ class SceneGenerator:
         image_path, ref_paths = self._resolve_input_paths(scene)
         image = image_path.read_bytes() if image_path else None
         references = [p.read_bytes() for p in ref_paths]
+        is_ref = task == "reference-to-video"
+        background_picture = None
+        if is_ref and self.background:
+            references.append(self.background.read_bytes())
+            background_picture = len(references)
         # GENERATION length sent to Veo (not the blueprint length)
         gen_seconds = veo_generation_seconds(scene)
         return VeoJobSpec(
             scene_id=scene["id"], task=task, model=model,
-            prompt=compose_veo_prompt(scene),           # appends spoken text for video-with-audio
+            prompt=compose_veo_prompt(scene, background_picture),           # appends spoken text for video-with-audio
             aspect_ratio=scene.get("aspect_ratio", "16:9"),
             duration_s=gen_seconds, image=image, references=references,
-            safety=scene.get("safety", "Allow (Adult only)")        
+            safety=scene.get("safety", "Allow (Adult only)"),
+            reference_video=self.reference_video if is_ref else None,
+            seed=self.seed,
         )
 
     def generate_scene(self, scene: dict) -> Path:
@@ -154,8 +174,6 @@ class SceneGenerator:
         Records generation cost before returning the output path.
         """
         spec = self.build_spec(scene)
-        credits_fn = getattr(self.client, "credits", None)   # kie has it; gemini doesn't
-        before = credits_fn() if callable(credits_fn) else None
         mp4, attempts = generate_with_retry(
             self.client, spec, max_retries=self.max_retries, backoff_s=self.backoff_s
         )
@@ -171,33 +189,26 @@ class SceneGenerator:
             if length and 0 < float(length) < float(spec.duration_s or 0):
                 trim_video(dest, float(length))
 
+        # Billed per second of GENERATED video, measured off the pristine clip rather
+        # than spec.duration_s, so the number is what the provider actually returned
+        # (Veo snaps to 4/6/8s, and a B-Roll asking for 1s is generated, and billed,
+        # at the 4s floor). Measuring the raw file also survives the trim above.
+        raw = self.raw_dir / f"{scene['id']}.mp4"
         try:
-            after = credits_fn() if callable(credits_fn) else None
-        except Exception:
-            after = None      # keep the downloaded clip even if the balance GET fails
-
-        common = {"scene_id": scene["id"], "task": spec.task, "attempts": attempts}
-        if before is not None and after is not None:
-            # kie.ai: the provider tells us exactly what it deducted, so bill the
-            # measured credit delta and convert at the kie credit rate. Nothing is
-            # inferred.
-            costs.record(self.run, layer="L5", provider="kie.ai", model="kie.ai",
-                         unit="credit", quantity=round(before - after, 6),
-                         measured=True, veo_model=spec.model,
-                         credits_before=before, credits_after=after, **common)
-        else:
-            # Gemini: billed per second of GENERATED video. Measured off the
-            # pristine clip rather than spec.duration_s, so the number is what Veo
-            # actually returned — Veo snaps to 4/6/8s, and a B-Roll asking for 1s
-            # is generated, and billed, at the 4s floor. Measuring the raw file
-            # also survives the trim that happens above.
-            raw = self.raw_dir / f"{scene['id']}.mp4"
-            try:
-                gen_dur, measured = get_duration(raw), True
-            except FfmpegError:
-                gen_dur, measured = float(spec.duration_s or 0.0), False
-            costs.record(self.run, layer="L5", provider="gemini", model=spec.model,
-                         unit="second", quantity=gen_dur, measured=measured, **common)
+            gen_dur, measured = get_duration(raw), True
+        except FfmpegError:
+            gen_dur, measured = float(spec.duration_s or 0.0), False
+        extra: dict = {"scene_id": scene["id"], "task": spec.task, "attempts": attempts}
+        # A client may name its own billing identity; the default is Gemini, whose
+        # rate is keyed by the Veo model. The company GPU has no per-call charge, so
+        # its seconds are logged for information only (priced=False) and do not make
+        # the run total look like an undercount.
+        if hasattr(self.client, "cost_provider"):
+            extra["priced"] = False
+        costs.record(self.run, layer="L5",
+                     provider=getattr(self.client, "cost_provider", "gemini"),
+                     model=getattr(self.client, "cost_model", spec.model),
+                     unit="second", quantity=gen_dur, measured=measured, **extra)
         return dest
 
     def _finish_from_raw(self, scene: dict, voice_for, audio) -> Path:
@@ -249,7 +260,7 @@ class SceneGenerator:
 
     def rerender_tts(self, blueprint: dict, voice_for, audio) -> list[Path]:
         """Re-run ONLY L6 from the preserved veo_raw/ clips. No Veo call, no
-        video credits. Requires a prior run_all that saved veo_raw/."""
+        paid video generation. Requires a prior run_all that saved veo_raw/."""
         self.scenes_dir.mkdir(parents=True, exist_ok=True)
         out: list[Path] = []
         for scene in blueprint.get("scenes", []):

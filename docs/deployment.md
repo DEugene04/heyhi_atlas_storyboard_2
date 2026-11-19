@@ -229,7 +229,7 @@ not a CRUD app: requests are long, expensive, and non-idempotent.
 | Google Gemini API | director, images, Veo, Lyria, diarization | **Yes**                       |
 | ElevenLabs API    | speech-to-speech, voice list              | **Yes** (default audio path)  |
 | Azure Speech      | TTS                                       | Only if `tts_provider=azure`  |
-| kie.ai            | alternative Veo provider                  | **No** — testing only, opt-in |
+| kie.ai            | PDF-review character images only          | Only for PDF review           |
 
 **Environment variables:** `HEYHI_GEMINI_API_KEY`, `HEYHI_ELEVENLABS_API_KEY`,
 plus `HEYHI_AZURE_SPEECH_KEY`/`_REGION` if Azure stays. Path overrides:
@@ -291,8 +291,9 @@ competence; having IT discover them reads as the opposite.
 - Do we need a DPA with those providers? Does one already exist?
 - Data residency requirements? HeyHi is Singapore-based; Gemini and ElevenLabs
   process outside SG.
-- Is kie.ai acceptable at all? It egresses generated frames to a third-party host
-  — currently testing-only, and easy to remove entirely if the answer is no.
+- Is kie.ai acceptable for PDF-review character images? It receives the project's
+  presenter/background images; video no longer leaves the company network (H3 runs
+  on the company GPU).
 - Does generated video containing a likeness of a library character raise any
   rights question?
 

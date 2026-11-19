@@ -107,8 +107,8 @@ What's in it, and why:
 | `python-multipart`               | **not imported directly** — FastAPI requires it for `Form()`/`UploadFile` in `/pipeline/upload`. Missing it fails at request time, not import time.                                                                                                                                  |
 | `pydantic>=2.7`                  | v2 only (`model_validate`, `model_dump`, `ConfigDict`)                                                                                                                                                                                                                               |
 | `python-dotenv`                  | `app/config.py` loads `.env` at import                                                                                                                                                                                                                                               |
-| `google-genai`                   | director, Gemini image, Veo, Lyria **and** diarization                                                                                                                                                                                                                               |
-| `openai`                         | PDF review script synthesis, visual-slide selection, and vision-based crop-coordinate suggestions                                                                                                                                                                                     |
+| `google-genai`                   | Gemini image, Veo, Lyria **and** diarization                                                                                                                                                                                                                               |
+| `openai`                         | the director (GPT-4o, structured outputs), PDF review script synthesis, visual-slide selection, and vision-based crop-coordinate suggestions                                                                                                                                                                                     |
 | `elevenlabs`                     | speech-to-speech + the paginated voice list                                                                                                                                                                                                                                          |
 | `azure-cognitiveservices-speech` | only for `tts_provider="azure"`                                                                                                                                                                                                                                                      |
 | `requests`                       | Kie video requests and downloading S3/CloudFront PDFs for review                                                                                                                                                                                                                      |
@@ -173,8 +173,11 @@ renderer, and every client — see
 Copy `.env` and fill it in. **Never commit it** — it's already in `.gitignore`.
 
 ```bash
-# Required for everything (director, images, Veo, Lyria, diarization)
+# Required for images, Veo, Lyria and diarization
 HEYHI_GEMINI_API_KEY=
+
+# Required for the director (GPT-4o) and for PDF review
+OPENAI_API_KEY=
 
 # Required for the default audio path
 HEYHI_ELEVENLABS_API_KEY=
@@ -183,11 +186,17 @@ HEYHI_ELEVENLABS_API_KEY=
 HEYHI_AZURE_SPEECH_KEY=
 HEYHI_AZURE_SPEECH_REGION=
 
-# Required only for video_provider=kieai (testing)
+# Video (default provider minimax_h3): base URL of the company GPU server running
+# sd-server with the H3 Ref2VA model. No API key; reachable over Tailscale.
+MINIMAX_H3_URL=http://100.104.69.66:8001
+# Optional: a second server with the FL2VA model for first-frame scenes
+# MINIMAX_H3_FL2VA_URL=
+# Optional tuning: ATLAS_H3_RESOLUTION (480P), ATLAS_H3_STEPS (8),
+# ATLAS_H3_COMPRESSION (50), ATLAS_H3_TIMEOUT_S (1800)
+
+# Required only for PDF-review character images (kie.ai Nano Banana)
 KIE_API_KEY=
 
-# Required only for PDF review script, visual selection, and AI crop suggestions
-OPENAI_API_KEY=
 ```
 
 `load_dotenv()` runs when `app.config` is imported, so the API picks these up
@@ -511,9 +520,9 @@ python -m bench.diarize_local --video path/to/clip.mp4 --expected "the exact wor
 
 | Symptom                                                   | Cause                                                                                                                        |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `503 director not configured`                             | `HEYHI_GEMINI_API_KEY` unset                                                                                                 |
+| `503 director not configured`                             | `OPENAI_API_KEY` unset                                                                                                       |
 | `503 character library not initialized`                   | No `index.json` at `CHAR_LIB_ROOT`. Run the `app.libraries` CLI.                                                             |
-| `502 director failed after N attempts`                    | Gemini couldn't produce a valid blueprint. The last error names the rules it broke — raise `max_retries` or loosen the rule. |
+| `502 director failed after N attempts`                    | GPT-4o couldn't produce a valid blueprint. The last error names the rules it broke — raise `max_retries` or loosen the rule. |
 | `409 blueprint.json exists`                               | Pass `force=true`. Note this wipes the selection.                                                                            |
 | `409 scenes exist` / `409 assets exist`                   | `resume=true` to fill in what is missing, `force=true` to pay for it all again.                                              |
 | `422 force and resume are mutually exclusive`             | Pick one. `resume` after a crash, `force` after a blueprint edit.                                                            |

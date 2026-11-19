@@ -28,10 +28,10 @@ def _pdf_bytes() -> bytes:
 def test_pdf_review_ui_is_served() -> None:
     response = TestClient(app).get("/pdf-review/")
     assert response.status_code == 200
-    assert "Video generation is intentionally disabled" in response.text
+    assert "company GPU server" in response.text
 
 
-def test_local_review_flow_stops_at_locked_preflight(tmp_path, monkeypatch) -> None:
+def test_local_review_flow_reaches_gpu_preflight(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
     client = TestClient(app)
 
@@ -42,7 +42,6 @@ def test_local_review_flow_stops_at_locked_preflight(tmp_path, monkeypatch) -> N
     assert imported.status_code == 200
     source = imported.json()
     assert source["page_count"] == 2
-    assert source["video_generation_enabled"] is False
     project_id = source["project_id"]
 
     draft = client.post(
@@ -89,8 +88,9 @@ def test_local_review_flow_stops_at_locked_preflight(tmp_path, monkeypatch) -> N
     )
     assert preflight.status_code == 200
     manifest = preflight.json()
-    assert manifest["video_generation_enabled"] is False
-    assert manifest["verified_provider_model"] == "bytedance/seedance-2"
+    assert manifest["video_generation_enabled"] is True
+    assert manifest["provider"] == "local-gpu"
+    assert manifest["model"].startswith("minimax-h3")
 
 
 def test_local_draft_condenses_a_large_selection() -> None:
@@ -382,3 +382,10 @@ def test_openai_script_visual_selection_and_crop_use_structured_responses(tmp_pa
     assert image_input["type"] == "input_image"
     assert image_input["image_url"].startswith("data:image/jpeg;base64,")
     assert image_input["detail"] == "high"
+
+
+def test_scene_prompt_tags_references_as_documented_pictures():
+    from app.pdf_review import _scene_prompt
+    both = _scene_prompt("hi", True, True)
+    assert "<Picture 1>" in both and "<Picture 2>" in both and "Image 1" not in both
+    assert "<Picture 1>" in _scene_prompt("hi", False, True)

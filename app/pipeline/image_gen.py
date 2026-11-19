@@ -1,5 +1,5 @@
 """
-app/pipeline/image_gen.py — Layer 4 asset generation (Gemini 2.5 Flash Image).
+app/pipeline/image_gen.py — Layer 4 asset generation (OpenAI gpt-image-2).
 
 Generates backgrounds and storyboards from the resolved blueprint.
 Characters come from the shared character library and are never generated here.
@@ -41,6 +41,18 @@ class ImageLLM(Protocol):
 
 class AssetError(RuntimeError):
     pass
+
+
+# Appended to every image prompt. The image model renders any text it can: left
+# alone it draws the panel timecodes from the storyboard template, invents
+# captions and speech bubbles, and writes signage. Veo copies all of it into the
+# video. The scene prompts already forbid text; this is the same rule one layer
+# earlier.
+NO_TEXT_CLAUSE = (
+    "Wordless image: no captions, subtitles, speech bubbles, timecodes, panel "
+    "labels, signage, logos, or any readable letters or numbers anywhere; every "
+    "poster, screen, calendar, document and wall is blank or abstract."
+)
 
 
 def _compose_prompt(style: str, prompt: str) -> str:
@@ -98,9 +110,10 @@ class AssetGenerator:
     def _gen(self, prompt: str, ref_paths: list[Path], dest: Path) -> Path:
         """One image with retry + exponential backoff."""
         refs = [p.read_bytes() for p in ref_paths]
+        prompt = f"{prompt} {NO_TEXT_CLAUSE}"
 
         def once() -> Path:
-            png = self.client.generate(prompt, refs)         # Calls the gemini model
+            png = self.client.generate(prompt, refs)         # Calls the image model
             if not png:
                 raise AssetError("empty image bytes")
             dest.parent.mkdir(parents=True, exist_ok=True)   # Create the directory
@@ -111,20 +124,17 @@ class AssetGenerator:
             path, attempts = retry_call(
                 once, attempts=self.max_retries + 1, exc_type=Exception,
                 backoff_s=self.backoff)
-            # Cost is recorded per SUCCESSFUL image. Failed attempts before it
-            # are noted via `attempts` but not billed separately — a call that
-            # errored produced no image, and Gemini bills image output. If that
-            # assumption turns out wrong, this is the line to change.
-            from app.costs import record, record_tokens
-            record(self.run, layer="L4", provider="gemini",
-                   model=getattr(self.client, "model", "gemini-2.5-flash-image"),
-                   unit="image", quantity=1, measured=True,
-                   asset=dest.name, attempts=attempts)
+            # Cost is recorded per SUCCESSFUL image, from the token counts the
+            # API reported for it. A call that errored produced no image and is
+            # not billed; if that assumption turns out wrong, this is the line
+            # to change.
             usage = getattr(self.client, "usage_log", None)
             if usage:
-                record_tokens(self.run, layer="L4",
-                              model=getattr(self.client, "model", "gemini-2.5-flash-image"),
-                              usage=usage[-1], asset=dest.name, priced=False)
+                from app.costs import record_image_usage
+                record_image_usage(self.run, layer="L4",
+                                   provider=getattr(self.client, "provider", "openai"),
+                                   model=self.client.model, usage=usage[-1],
+                                   asset=dest.name, attempts=attempts)
             return path
         except RetriesExhausted as ex:
             raise AssetError(
@@ -174,60 +184,81 @@ class AssetGenerator:
         return {"backgrounds": backgrounds, "storyboard": storyboards}
 
 
-# ---------------------------------------------------------------- Gemini client
-class GeminiImageClient:
-    """ImageLLM implementation backed by Gemini 2.5 Flash Image."""
+# ---------------------------------------------------------------- OpenAI client
+# Exact 16:9 / 9:16 sizes. gpt-image-2 takes flexible sizes (edges a multiple of
+# 16, aspect ratio at most 3:1), so the plate matches the video with no crop.
+SIZE_BY_ASPECT = {"16:9": "1536x864", "9:16": "864x1536", "1:1": "1024x1024"}
+DEFAULT_IMAGE_MODEL = "gpt-image-2"
+DEFAULT_IMAGE_QUALITY = "medium"       # low | medium | high; ATLAS_IMAGE_QUALITY overrides
 
-    def __init__(self, client, model: str = "gemini-2.5-flash-image",
-                 aspect_ratio: str = "16:9"):
+
+def image_model_from_env() -> str:
+    import os
+    return os.environ.get("ATLAS_IMAGE_MODEL", DEFAULT_IMAGE_MODEL)
+
+
+def image_quality_from_env() -> str:
+    import os
+    return os.environ.get("ATLAS_IMAGE_QUALITY", DEFAULT_IMAGE_QUALITY)
+
+
+class OpenAIImageClient:
+    """ImageLLM implementation backed by OpenAI gpt-image-2.
+
+    No references -> images.generate. With references -> images.edit, which
+    takes several input images and conditions the new image on all of them.
+    """
+    provider = "openai"
+
+    def __init__(self, client, model: str | None = None, aspect_ratio: str = "16:9",
+                 quality: str | None = None):
+        if aspect_ratio not in SIZE_BY_ASPECT:
+            raise ValueError(f"no image size for aspect_ratio {aspect_ratio!r}")
         self.client = client
-        self.model = model
-        self.aspect_ratio = aspect_ratio
+        self.model = model or image_model_from_env()
+        self.size = SIZE_BY_ASPECT[aspect_ratio]
+        self.quality = quality or image_quality_from_env()
         # One entry per successful generate(), in order — same side-channel
-        # pattern as GeminiDirector.usage_log, and for the same reason: the
-        # ImageLLM Protocol is `generate(str, list[bytes]) -> bytes`, and
-        # billing does not belong in that contract. AssetGenerator drains this
-        # after generate_all(). Retries append too, since each attempt bills.
+        # pattern as OpenAIDirector.usage_log: the ImageLLM Protocol is
+        # `generate(str, list[bytes]) -> bytes`, and billing does not belong in
+        # that contract. AssetGenerator reads the last entry after each image.
         self.usage_log: list[dict] = []
 
     def generate(self, prompt: str, references: list[bytes]) -> bytes:
-        from google.genai import types
-        contents: list = [prompt]
-        for data in references:
-            contents.append(types.Part.from_bytes(data=data, mime_type="image/png"))
-        # Actual call to GEMINI API
-        resp = self.client.models.generate_content(
-            model=self.model,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"],                    # Ensure that Gemini returns an image
-                image_config=types.ImageConfig(aspect_ratio=self.aspect_ratio),
-            ),
-        )
-        # Find the image response
-        for part in resp.candidates[0].content.parts:
-            inline = getattr(part, "inline_data", None)
-            if inline is not None and inline.data:
-                from app.costs import usage_from_response
-                # Recorded for information only — images are priced per image,
-                # not per token (see PRICING in app/costs.py for why).
-                self.usage_log.append(usage_from_response(resp))
-                return inline.data
-        raise RuntimeError("Gemini returned no image part")
+        import base64
+        kw = dict(model=self.model, prompt=prompt, size=self.size,
+                  quality=self.quality, n=1)
+        if references:
+            images = [(f"ref_{i}.png", data, "image/png")
+                      for i, data in enumerate(references)]
+            resp = self.client.images.edit(image=images, **kw)
+        else:
+            resp = self.client.images.generate(**kw)
+        data = resp.data[0].b64_json if resp.data else None
+        if not data:
+            raise RuntimeError("OpenAI returned no image")
+        u = getattr(resp, "usage", None)
+        det = getattr(u, "input_tokens_details", None)
+        self.usage_log.append({
+            "input_text_tokens": getattr(det, "text_tokens", 0) or 0,
+            "input_image_tokens": getattr(det, "image_tokens", 0) or 0,
+            "output_tokens": getattr(u, "output_tokens", 0) or 0,
+        })
+        return base64.b64decode(data)
 
 
 def main(argv=None) -> int:
     import argparse
 
-    ap = argparse.ArgumentParser(description="L4 asset generation (Gemini 2.5 Flash Image)")
+    ap = argparse.ArgumentParser(description="L4 asset generation (gpt-image-2)")
     ap.add_argument("--run", type=Path, required=True, help="run directory (holds blueprint.json)")
     ap.add_argument("--char-lib", type=Path, default=Path("_storage/character_library"))
     ap.add_argument("--aspect-ratio", default="16:9", help="image plate aspect ratio (must match the video)")
     a = ap.parse_args(argv)
 
-    from app.config import make_client
+    from app.config import make_openai_client
     gen = AssetGenerator(
-        a.run, a.char_lib, GeminiImageClient(make_client(), aspect_ratio=a.aspect_ratio),
+        a.run, a.char_lib, OpenAIImageClient(make_openai_client(), aspect_ratio=a.aspect_ratio),
         retry_backoff_s=backoff_from_env(),
     )
     result = gen.generate_all()

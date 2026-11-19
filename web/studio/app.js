@@ -239,7 +239,7 @@ function renderDirector() {
   const el = $("#stage2"), s = state.status;
   if (!unlocked(2)) return locked(el, 2, "Create a run with a source file first.");
   const bp = state.blueprint;
-  const kids = [head(2, "Director", "Gemini reads the source and writes the blueprint: scenes, characters, backgrounds and music.",
+  const kids = [head(2, "Director", "GPT-4o reads the source and writes the blueprint: scenes, characters, backgrounds and music.",
     { cls: bp ? "ok" : "", text: bp ? "Blueprint ready" : "Not generated" })];
 
   const btn = h("button", {
@@ -247,7 +247,7 @@ function renderDirector() {
     onclick: () => generateBlueprint(!!bp),
   }, bp ? "Regenerate blueprint" : "Generate blueprint →");
   kids.push(h("div", { class: "approval-bar" },
-    spendHint("Gemini 2.5 Flash"), h("div", { class: "actions" }, btn,
+    spendHint("GPT-4o"), h("div", { class: "actions" }, btn,
       bp ? h("button", { class: "button primary", onclick: () => go(3) }, "Continue to cast →") : null)));
 
   if (bp) {
@@ -272,7 +272,7 @@ const metric = (label, value) => h("div", {}, h("span", {}, label), h("strong", 
 
 function generateBlueprint(force) {
   if (force && !confirm("Regenerate the blueprint?\n\nThis spends credits and DELETES your character/voice selection for this run. Generated assets are not removed but may no longer match.")) return;
-  return run("Directing", "Gemini is writing the blueprint (can take a minute).", async () => {
+  return run("Directing", "GPT-4o is writing the blueprint (can take a minute).", async () => {
     await post("/direct", { run_id: state.runId, force });
     state.cast = {};
     notice("Blueprint generated.");
@@ -377,10 +377,10 @@ function renderAssets() {
   const el = $("#stage4"), s = state.status;
   if (!unlocked(4)) return locked(el, 4, "Save the character and voice selection first.");
   const bp = state.blueprint, have = s.backgrounds > 0;
-  const kids = [head(4, "Assets", "Gemini Image paints the backgrounds and the 2×2 storyboards that Veo uses as references.",
+  const kids = [head(4, "Assets", "GPT Image 2 paints the backgrounds and the 2×2 storyboards that Veo uses as references.",
     { cls: have ? "ok" : "", text: have ? `${s.backgrounds} backgrounds · ${s.storyboards} storyboards` : "Not generated" })];
 
-  kids.push(h("div", { class: "approval-bar" }, spendHint("Gemini 2.5 Flash Image"), h("div", { class: "actions" },
+  kids.push(h("div", { class: "approval-bar" }, spendHint("GPT Image 2"), h("div", { class: "actions" },
     have
       ? [h("button", { class: "button secondary", disabled: state.working, onclick: () => genAssets("resume") }, "Resume (fill missing)"),
          h("button", { class: "button danger", disabled: state.working, onclick: () => genAssets("force") }, "Regenerate all"),
@@ -415,7 +415,7 @@ function renderScenes() {
   if (!unlocked(5)) return locked(el, 5, "Generate assets first.");
   const done = s.scenes_ready === s.scenes_total && s.scenes_total > 0;
   const any = s.scenes_ready > 0 || s.veo_raw > 0;
-  const kids = [head(5, "Scenes", "Veo generates each clip, then ElevenLabs voices it and the clip is trimmed to the speech. Scenes run one after another and take several minutes each.",
+  const kids = [head(5, "Scenes", "MiniMax H3 generates each clip, then ElevenLabs voices it and the clip is trimmed to the speech. Scenes run one after another and take several minutes each.",
     { cls: done ? "ok" : any ? "warn" : "", text: `${s.scenes_ready}/${s.scenes_total} ready` })];
 
   kids.push(h("div", { class: "panel" }, h("div", { class: "field" },
@@ -425,16 +425,16 @@ function renderScenes() {
       h("option", { value: "whisper" }, "Whisper (local, needs optional install)")))));
 
   const act = (label, cls, mode) => h("button", { class: `button ${cls}`, disabled: state.working, onclick: () => genScenes(mode) }, label);
-  kids.push(h("div", { class: "approval-bar" }, spendHint("Veo 3.1 + ElevenLabs + diarizer"), h("div", { class: "actions" },
+  kids.push(h("div", { class: "approval-bar" }, spendHint("MiniMax H3 + ElevenLabs + diarizer"), h("div", { class: "actions" },
     !any ? act("Generate scenes →", "primary", "new")
       : [done ? null : act("Resume (generate missing)", "primary", "resume"),
-         s.veo_raw > 0 ? act("Re-run voice only (no Veo)", "secondary", "tts_only") : null,
+         s.veo_raw > 0 ? act("Re-run voice only (no video)", "secondary", "tts_only") : null,
          act("Regenerate all", "danger", "force"),
          done ? h("button", { class: "button primary", onclick: () => go(6) }, "Continue →") : null])));
 
   const pct = s.scenes_total ? Math.round(100 * s.scenes_ready / s.scenes_total) : 0;
   kids.push(h("div", { class: "panel" }, h("div", { class: "progress" }, h("i", { style: `width:${pct}%` })),
-    h("table", {}, h("thead", {}, h("tr", {}, ["Scene", "Type", "Veo clip", "Voiced / ready", "Preview"].map(t => h("th", {}, t)))),
+    h("table", {}, h("thead", {}, h("tr", {}, ["Scene", "Type", "Video clip", "Voiced / ready", "Preview"].map(t => h("th", {}, t)))),
       h("tbody", {}, s.scene_states.map(sc => h("tr", {},
         h("td", {}, sc.id),
         h("td", {}, h("span", { class: `tag${sc.type === "B-Roll" ? " broll" : ""}` }, sc.type === "B-Roll" ? "B-Roll" : "Speaking")),
@@ -444,9 +444,9 @@ function renderScenes() {
 }
 
 function genScenes(mode) {
-  if (mode === "force" && !confirm("Regenerate EVERY scene? This re-runs Veo for all scenes and spends credits again.")) return;
+  if (mode === "force" && !confirm("Regenerate EVERY scene? This re-runs MiniMax H3 for all scenes and spends credits again.")) return;
   const body = {
-    run_id: state.runId, tts_provider: "elevenlabs", video_provider: "gemini",
+    run_id: state.runId, tts_provider: "elevenlabs", video_provider: "minimax_h3",
     diarizer: $("#diarizer")?.value || "gemini",
     force: mode === "force", resume: mode === "resume", tts_only: mode === "tts_only",
   };
