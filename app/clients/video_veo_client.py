@@ -45,6 +45,7 @@ class VeoJobSpec:
     safety: str = "Allow (Adult only)"
     reference_video: Path | None = None    # H3 only: motion/look reference clip
     seed: int | None = None                # H3 only: fixed seed (None = random, logged)
+    turbo: bool | None = None              # H3 only: turbo LoRA (None = server default)
 
 
 class VeoClient(Protocol):

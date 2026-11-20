@@ -20,6 +20,7 @@ from app.utils.ffmpeg_utils import (
 from app.clients.video_veo_client import (
     VeoClient, VeoError, VeoJobSpec, generate_with_retry,
 )
+from app.config import DirectorConfig
 from app.pipeline import external_tts
 from app.pipeline.director import ROUTE_BY_PREFIX, parse_reference
 
@@ -28,9 +29,16 @@ from app.pipeline.director import ROUTE_BY_PREFIX, parse_reference
 _FAST = ROUTE_BY_PREFIX["storyboard"]
 _LITE = ROUTE_BY_PREFIX["scene"]
 
-# Veo generates B-Roll at >=4s and speaking scenes at 8s.
+# B-Roll is generated at >=4s. Speaking scenes are sized to their dialogue and
+# never exceed VEO_VIDEO_SECONDS (the director caps text to fit it).
 VEO_BROLL_SECONDS = 4.0
 VEO_VIDEO_SECONDS = 8.0
+# Headroom over the pure reading time: speech onset plus a short tail. Every spare
+# second is a second the model can fill with babble, so keep it small. It must stay
+# large enough that the clip outlasts the TTS, since L6 can only trim, not extend.
+SPEECH_HEADROOM_S = 1.0
+# Appended after the spoken line so the model does not keep "speaking" into spare time.
+SILENT_AFTER_LINE = " Once the line is finished the character stays silent with their mouth closed."
 
 
 class VeoRouteError(VeoError):
@@ -87,25 +95,29 @@ def compose_veo_prompt(scene: dict, background_picture: int | None = None) -> st
     if scene.get("type") == "video-with-audio":
         text = (scene.get("text") or "").strip()
         if text:
-            prompt = f'{prompt} Audio sync: The character says "{text}"'
+            prompt = f'{prompt} Audio sync: The character says "{text}"{SILENT_AFTER_LINE}'
     return prompt
 
 def veo_generation_seconds(scene: dict) -> float:
     """Length asked of Veo (NOT the blueprint length). Pure — no assets needed.
     B-Roll: 4s floor (ceil(length) if longer), trimmed to blueprint length after.
-    Video-with-audio: 8s, trimmed by L6 to last TTS end."""
+    Video-with-audio: just long enough for the dialogue (words / pace + headroom,
+    4s floor, 8s ceiling), so the model has no spare seconds to babble in; L6 then
+    trims to the last TTS end."""
     if scene.get("type") == "B-Roll":
         length = scene.get("length")
         return (VEO_BROLL_SECONDS if not length or length <= VEO_BROLL_SECONDS
                 else float(math.ceil(length)))
-    return VEO_VIDEO_SECONDS
+    words = len((scene.get("text") or "").split())
+    need = words / DirectorConfig.words_per_second + SPEECH_HEADROOM_S
+    return float(min(VEO_VIDEO_SECONDS, max(VEO_BROLL_SECONDS, math.ceil(need))))
 
 # Convert scene from blueprint into mp4
 class SceneGenerator:
     def __init__(self, run_dir: str | Path, client: VeoClient,
                  max_retries: int = 3, backoff_s: float = 2.0,
                  background: Path | None = None, reference_video: Path | None = None,
-                 seed: int | None = None):
+                 seed: int | None = None, turbo: bool | None = None):
         self.run = Path(run_dir)
         # Shared-library extras (H3). Applied to reference-to-video scenes only:
         # image-to-video scenes already carry a first frame, which H3 cannot combine
@@ -113,6 +125,7 @@ class SceneGenerator:
         self.background = background
         self.reference_video = reference_video
         self.seed = seed
+        self.turbo = turbo
         self.client = client
         self.max_retries = max_retries
         self.backoff_s = backoff_s
@@ -162,7 +175,7 @@ class SceneGenerator:
             duration_s=gen_seconds, image=image, references=references,
             safety=scene.get("safety", "Allow (Adult only)"),
             reference_video=self.reference_video if is_ref else None,
-            seed=self.seed,
+            seed=self.seed, turbo=self.turbo,
         )
 
     def generate_scene(self, scene: dict) -> Path:
@@ -199,6 +212,8 @@ class SceneGenerator:
         except FfmpegError:
             gen_dur, measured = float(spec.duration_s or 0.0), False
         extra: dict = {"scene_id": scene["id"], "task": spec.task, "attempts": attempts}
+        if spec.turbo is not None:
+            extra["turbo"] = spec.turbo
         # A client may name its own billing identity; the default is Gemini, whose
         # rate is keyed by the Veo model. The company GPU has no per-call charge, so
         # its seconds are logged for information only (priced=False) and do not make

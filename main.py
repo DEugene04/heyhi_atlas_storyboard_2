@@ -192,10 +192,14 @@ def _run_status(d: Path) -> dict:
     """Where a run is, from which stage files exist. Mirrors the precondition
     checks of the endpoints above, so 'selected' means /pipeline/assets will
     accept the run, and so on."""
+    from app import costs
     from app.pipeline.external_tts import scene_is_done
 
     bp = _read_json(d / "blueprint.json")
     scenes = []
+    # Latest L5 record per scene says which H3 mode made the clip (None = unknown).
+    turbo_by_scene = {e.get("scene_id"): e.get("turbo")
+                      for e in costs.load(d) if e.get("layer") == "L5"}
     for sc in (bp or {}).get("scenes", []):
         sid = sc["id"]
         speaking = sc.get("type") == "video-with-audio"
@@ -204,6 +208,7 @@ def _run_status(d: Path) -> dict:
             "type": sc.get("type"),
             "topic": sc.get("topic"),
             "raw": (d / "veo_raw" / f"{sid}.mp4").is_file(),
+            "turbo": turbo_by_scene.get(sid),
             # a speaking scene is only finished once L6 wrote its marker; the
             # working copy in scenes/ exists earlier, before the voice is laid on
             "ready": scene_is_done(d, sid) if speaking
@@ -696,13 +701,14 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
     if problems:
         raise HTTPException(422, {"errors": problems})
 
-    if body.video_provider != "minimax_h3" and (body.background or body.reference_video):
-        raise HTTPException(422, "background / reference_video are only supported by video_provider='minimax_h3'")
+    if body.video_provider != "minimax_h3" and (body.background or body.reference_video or body.turbo):
+        raise HTTPException(422, "background / reference_video / turbo are only supported by video_provider='minimax_h3'")
     bg = _library_file(IMAGE_LIBRARY_ROOT, body.background)
     ref_video = _library_file(VIDEO_LIBRARY_ROOT, body.reference_video)
 
     gen = SceneGenerator(d, veo, backoff_s=retry_backoff_from_env(),
-                         background=bg, reference_video=ref_video, seed=body.seed)
+                         background=bg, reference_video=ref_video, seed=body.seed,
+                         turbo=body.turbo)
     try:
         if body.tts_only:
             paths = gen.rerender_tts(bp, voice_for=voice_for, audio=audio)

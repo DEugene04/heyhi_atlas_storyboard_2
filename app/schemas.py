@@ -317,6 +317,7 @@ class ScenesIn(BaseModel):
     background: str = ""
     reference_video: str = ""
     seed: int | None = Field(None, ge=0, lt=2**31)
+    turbo: bool | None = None     # H3 only: True = turbo LoRA (4 steps); None = ATLAS_H3_TURBO default
     # Provides word timings for subtitles. Gemini is billed per scene; Whisper runs
     # locally but requires the optional dependency. See docs/open-questions.md #16.
     diarizer: Literal["gemini", "whisper"] = "gemini"

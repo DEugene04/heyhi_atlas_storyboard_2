@@ -178,6 +178,7 @@ class GenerateSceneIn(BaseModel):
     reference_video: str = ""   # file name in the shared video library
     background: str = ""   # file name in the shared image library (not a project file)
     seed: int | None = Field(None, ge=0, lt=2**31)   # None = random; logged either way
+    turbo: bool | None = None   # True = turbo LoRA (4 steps); None = ATLAS_H3_TURBO default
 
 
 class _AIScriptSection(BaseModel):
@@ -1430,6 +1431,7 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
             duration=body.duration_s,
             aspect_ratio=body.aspect_ratio,
             seed=body.seed,
+            turbo=body.turbo,
         )
     except MinimaxH3Error as exc:
         raise HTTPException(502, f"video generation failed: {exc}")
@@ -1477,6 +1479,7 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
         "url": url,
         "job_id": result["job_id"],
         "seed": result["seed"],
+        "turbo": result["turbo"],
         "model": "minimax-h3",
         "generation_seconds": result["generation_seconds"],
         "duration_s": body.duration_s,
@@ -1508,5 +1511,8 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
         "url": url,
         "job_id": result["job_id"],
         "task": result["task"],
+        "turbo": result["turbo"],
+        "seed": result["seed"],
+        "generation_seconds": result["generation_seconds"],
         "composited": composited,
     }

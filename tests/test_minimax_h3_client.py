@@ -153,3 +153,30 @@ def test_reference_video_is_sent_as_one_frame_list(monkeypatch, tmp_path):
     assert "ref_videos" not in out["request"]
     with pytest.raises(h3.MinimaxH3Error):
         c.generate("hi", [], first_frame="x.png", reference_video=tmp_path / "v.mp4")
+
+
+def test_turbo_sends_task_lora_four_steps_and_flow_shift(monkeypatch, tmp_path):
+    from PIL import Image
+    img = tmp_path / "f.png"
+    Image.new("RGB", (64, 64)).save(img)
+    done = {"status": "completed", "result": {"b64_json": base64.b64encode(b"w").decode()}}
+    c, seen = _client(monkeypatch, [done, done, done, done])
+    out = c.generate("x", [img], duration=4, turbo=True)                 # reference
+    sp = seen["body"]["sample_params"]
+    assert seen["body"]["lora"][0]["path"] == h3.DEFAULT_TURBO_LORAS["reference-to-video"]
+    assert sp["sample_steps"] == 4 and sp["flow_shift"] == 6.0 and out["turbo"] is True
+    assert out["request"]["turbo"] is True
+    c.generate("x", [], first_frame=img, duration=4, turbo=True)         # first frame
+    assert seen["body"]["lora"][0]["path"] == h3.DEFAULT_TURBO_LORAS["first-frame-to-video"]
+    out = c.generate("x", [], duration=4, turbo=True)                    # t2v stays normal
+    assert "lora" not in seen["body"] and out["turbo"] is False
+    out = c.generate("x", [img], duration=4)                             # default off
+    assert "lora" not in seen["body"] and seen["body"]["sample_params"]["sample_steps"] == 8
+    assert "flow_shift" not in seen["body"]["sample_params"] and out["turbo"] is False
+
+
+def test_turbo_default_comes_from_env(monkeypatch):
+    monkeypatch.setenv("ATLAS_H3_TURBO", "1")
+    assert h3.MinimaxH3Client(base_url="http://gpu:8001").turbo is True
+    monkeypatch.setenv("ATLAS_H3_TURBO_LORA_REF2V", "custom.safetensors")
+    assert h3.MinimaxH3Client(base_url="http://gpu:8001").turbo_loras["reference-to-video"] == "custom.safetensors"

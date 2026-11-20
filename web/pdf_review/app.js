@@ -545,7 +545,7 @@ function renderGeneration() {
       ? `<video src="${video.url}?v=${Date.now()}" controls preload="metadata"></video>`
       : (crop ? `<img src="${crop.url}" alt="Reference for scene ${index + 1}">` : "No reference crop");
     const meta = video
-      ? `Generated · ${video.task ?? "h3"}${video.composited === false ? " · no composite" : ""}`
+      ? `Generated · ${video.turbo ? "TURBO" : "normal"}${video.seconds ? ` · ${Math.round(video.seconds)}s` : ""} · ${video.task ?? "h3"}${video.composited === false ? " · no composite" : ""}`
       : `Slide ${scene.page} · ${scene.duration_s}s`;
     return `<article class="gen-card" data-scene="${scene.id}">
       <div class="gen-media">${preview}</div>
@@ -580,8 +580,10 @@ async function generateOne(scene) {
       aspect_ratio: contract.aspect_ratio,
       background: $("#backgroundSelect").value,
       reference_video: $("#referenceVideoSelect").value,
+      turbo: $("#turboToggle").checked,
     });
-    state.videos.set(scene.id, { url: data.url, task: data.task, jobId: data.job_id, composited: data.composited });
+    state.videos.set(scene.id, { url: data.url, task: data.task, jobId: data.job_id, composited: data.composited,
+      turbo: data.turbo, seconds: data.generation_seconds, seed: data.seed });
     renderGeneration();
     notice(`Scene ${scene.id} generated.`);
     return true;

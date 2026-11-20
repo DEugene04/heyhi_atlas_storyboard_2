@@ -46,7 +46,7 @@ import random as _random
 import shutil
 import tempfile
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from app.paths import FONT_DIR, TRANSITIONS_DIR
@@ -1302,6 +1302,10 @@ class TitleStyle:
     wave_bounce_s: float = 0.35
     idle_amp: int = 5
     idle_period_s: float = 1.5
+    line_gap: int = 16               # px between wrapped lines
+
+# All pixel values in TitleStyle are authored for a frame whose short side is this.
+TITLE_REF_SHORT_SIDE = 720
 
 
 
@@ -1323,6 +1327,19 @@ CARTOON_TITLE_STYLE = TitleStyle(
     font_size=104,
     anim="wave",
 )
+
+def scale_title_style(style: TitleStyle, width: int, height: int) -> TitleStyle:
+    """Rescale every pixel measure of `style` to the real frame.
+
+    The style is authored for a 720px short side; the H3 model renders at 480P, where
+    an unscaled 96px title is a third larger relative to the frame than intended.
+    Scaling by the short side keeps the proportions in portrait too."""
+    k = min(width, height) / TITLE_REF_SHORT_SIDE
+    px = lambda v: max(1, round(v * k))
+    return replace(style, font_size=px(style.font_size), outline_w=px(style.outline_w),
+                   anim_travel=px(style.anim_travel), wave_amp=px(style.wave_amp),
+                   idle_amp=px(style.idle_amp), line_gap=px(style.line_gap))
+
 
 def title_style_for(style_type: str) -> TitleStyle:
     """cartoon -> energetic no-dim treatment; realism/semi-realism -> current."""
@@ -1371,8 +1388,7 @@ def _drawtext_text_esc(s: str) -> str:
 
 
 def _wave_letter_drawtexts(title: str, style: TitleStyle, font_path: str,
-                           W: int, H: int, s: float, e: float, alpha: str,
-                           line_gap: int = 16) -> str:
+                           W: int, H: int, s: float, e: float, alpha: str) -> str:
     """Change 2: cartoon title in-animation. One drawtext per visible letter,
     laid out with Pillow-measured advances (same idiom as _burn_boxed), each
     given a single delayed bounce so a wave travels left-to-right. Letters settle
@@ -1385,6 +1401,7 @@ def _wave_letter_drawtexts(title: str, style: TitleStyle, font_path: str,
     font = ImageFont.truetype(font_path, style.font_size)
     asc, desc = font.getmetrics()
     line_h = asc + desc
+    line_gap = style.line_gap
     lines = _wrap_title(title, style.max_chars_per_line).split("\n")
     block_h = len(lines) * line_h + (len(lines) - 1) * line_gap
     top = (H - block_h) / 2.0
@@ -1452,6 +1469,8 @@ def apply_opening_title(run_dir: str | Path, blueprint: dict, video: str | Path,
         return video
 
     s, e = span
+    vp = probe(video)                    # one probe: frame size + audio test
+    style = scale_title_style(style, int(vp["w"] or 1280), int(vp["h"] or 720))
     font = _title_font(style, read_language(run_dir))
 
     fin, fout = s, max(s, e - style.fade_s)
@@ -1462,7 +1481,6 @@ def apply_opening_title(run_dir: str | Path, blueprint: dict, video: str | Path,
     scrim = (f"drawbox=x=0:y=0:w=iw:h=ih:color=black@{style.scrim_opacity:.2f}:"
              f"t=fill:enable='between(t,{s:.3f},{e:.3f})'")
 
-    vp = probe(video)                    # one probe: frame size + audio test
     if style.anim == "wave":
         # cartoon: per-letter travelling wave (Change 2). No _title.txt needed.
         W, H = int(vp["w"] or 1280), int(vp["h"] or 720)
@@ -1487,7 +1505,7 @@ def apply_opening_title(run_dir: str | Path, blueprint: dict, video: str | Path,
             f"x=(w-text_w)/2:text_align=center:y='{y_expr}':fontsize={style.font_size}:"
             f"fontcolor=0x{style.font_hex}:"
             f"borderw={style.outline_w}:bordercolor=0x{style.outline_hex}:"
-            f"line_spacing=16:alpha='{alpha}':enable='between(t,{s:.3f},{e:.3f})'"
+            f"line_spacing={style.line_gap}:alpha='{alpha}':enable='between(t,{s:.3f},{e:.3f})'"
         )
 
     out = run_dir / "merged_title.mp4"

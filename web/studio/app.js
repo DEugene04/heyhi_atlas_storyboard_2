@@ -424,6 +424,10 @@ function renderScenes() {
       h("option", { value: "gemini" }, "Gemini (billed per scene)"),
       h("option", { value: "whisper" }, "Whisper (local, needs optional install)")))));
 
+  kids.push(h("div", { class: "panel" }, h("div", { class: "field" },
+    h("label", { for: "turbo" }, h("input", { id: "turbo", type: "checkbox", disabled: state.working, checked: state.turbo, onchange: e => { state.turbo = e.target.checked; } }),
+      " Turbo mode — 4 steps + speed LoRA, faster but may be lower quality. Use the same run to A/B against normal."))));
+
   const act = (label, cls, mode) => h("button", { class: `button ${cls}`, disabled: state.working, onclick: () => genScenes(mode) }, label);
   kids.push(h("div", { class: "approval-bar" }, spendHint("MiniMax H3 + ElevenLabs + diarizer"), h("div", { class: "actions" },
     !any ? act("Generate scenes →", "primary", "new")
@@ -434,10 +438,11 @@ function renderScenes() {
 
   const pct = s.scenes_total ? Math.round(100 * s.scenes_ready / s.scenes_total) : 0;
   kids.push(h("div", { class: "panel" }, h("div", { class: "progress" }, h("i", { style: `width:${pct}%` })),
-    h("table", {}, h("thead", {}, h("tr", {}, ["Scene", "Type", "Video clip", "Voiced / ready", "Preview"].map(t => h("th", {}, t)))),
+    h("table", {}, h("thead", {}, h("tr", {}, ["Scene", "Type", "Mode", "Video clip", "Voiced / ready", "Preview"].map(t => h("th", {}, t)))),
       h("tbody", {}, s.scene_states.map(sc => h("tr", {},
         h("td", {}, sc.id),
         h("td", {}, h("span", { class: `tag${sc.type === "B-Roll" ? " broll" : ""}` }, sc.type === "B-Roll" ? "B-Roll" : "Speaking")),
+        h("td", {}, sc.turbo == null ? "—" : sc.turbo ? "Turbo" : "Normal"),
         h("td", {}, sc.raw ? "✓" : "…"), h("td", {}, sc.ready ? "✓" : "…"),
         h("td", {}, sc.ready ? h("video", { src: media(`scenes/${sc.id}.mp4`), controls: true, preload: "none", width: 200 }) : "—")))))));
   el.replaceChildren(...kids);
@@ -447,7 +452,7 @@ function genScenes(mode) {
   if (mode === "force" && !confirm("Regenerate EVERY scene? This re-runs MiniMax H3 for all scenes and spends credits again.")) return;
   const body = {
     run_id: state.runId, tts_provider: "elevenlabs", video_provider: "minimax_h3",
-    diarizer: $("#diarizer")?.value || "gemini",
+    diarizer: $("#diarizer")?.value || "gemini", turbo: !!state.turbo,
     force: mode === "force", resume: mode === "resume", tts_only: mode === "tts_only",
   };
   // Synchronous POST; progress comes from polling /status, which the server

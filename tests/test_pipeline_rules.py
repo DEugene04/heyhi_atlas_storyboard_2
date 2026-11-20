@@ -116,9 +116,14 @@ def test_long_broll_rounded_up_to_a_whole_second():
     assert veo_generation_seconds({"type": "B-Roll", "length": 5.2}) == 6.0
 
 
-def test_speaking_scenes_always_generated_at_eight_seconds():
-    """Fixed, regardless of text length. L6 trims to where the voice ends."""
-    assert veo_generation_seconds({"type": "video-with-audio", "length": None}) == VEO_VIDEO_SECONDS == 8.0
+@pytest.mark.parametrize("words,expected", [
+    (0, 4.0), (5, 4.0), (8, 5.0), (12, 6.0), (17, 8.0), (20, 8.0), (40, 8.0),
+])
+def test_speaking_scenes_sized_to_their_dialogue(words, expected):
+    """words / 2.5 wps + 1s headroom, 4s floor, 8s ceiling — so a short line is not
+    given 8s to fill with babble."""
+    scene = {"type": "video-with-audio", "length": None, "text": " ".join(["word"] * words)}
+    assert veo_generation_seconds(scene) == expected <= VEO_VIDEO_SECONDS
 
 
 @pytest.mark.parametrize("requested,snapped", [
@@ -140,7 +145,8 @@ def test_spoken_text_appended_for_speaking_scenes():
     animate the mouth, and on the Azure path its native audio is the timing
     reference the overlay aligns against."""
     out = compose_veo_prompt({"type": "video-with-audio", "prompt": "P", "text": "Hello."})
-    assert out == 'P Audio sync: The character says "Hello."'
+    assert out == ('P Audio sync: The character says "Hello."'
+                   ' Once the line is finished the character stays silent with their mouth closed.')
 
 
 def test_broll_prompt_left_alone():
@@ -238,3 +244,15 @@ def test_transient_markers_recognised(msg):
 @pytest.mark.parametrize("msg", ["400 bad request", "invalid api key", "safety filtered"])
 def test_permanent_errors_not_treated_as_transient(msg):
     assert not looks_transient(Exception(msg))
+
+
+# ---------------------------------------------------------------- title scaling
+def test_title_style_scales_to_the_frame_short_side():
+    """Title sizes are authored for 720p; at H3's 480P (832x480) they must shrink,
+    in portrait too, and 720p must be left alone."""
+    from app.pipeline.renderer import DEFAULT_TITLE_STYLE as base, scale_title_style
+    assert scale_title_style(base, 1280, 720).font_size == base.font_size
+    small = scale_title_style(base, 832, 480)
+    assert small.font_size == round(base.font_size * 480 / 720) == 64
+    assert small.outline_w < base.outline_w and small.anim_travel < base.anim_travel
+    assert scale_title_style(base, 480, 832).font_size == small.font_size

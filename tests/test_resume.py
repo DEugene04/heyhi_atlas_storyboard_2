@@ -301,3 +301,13 @@ def test_library_background_video_and_seed_reach_reference_scenes_only(tmp_path)
     assert spec.reference_video == vid and spec.seed == 7
     assert "<Picture 2>" in spec.prompt
     assert spec.prompt.index("<Picture 2>") < spec.prompt.index("Audio sync")
+
+
+def test_turbo_flag_reaches_the_spec():
+    scene = {"id": "s1", "task": "reference-to-video", "model": "Veo 3.1 Fast", "type": "B-Roll",
+             "prompt": "p", "length": 4, "reference_from": "storyboard:k1", "aspect_ratio": "16:9"}
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "storyboard").mkdir(); (Path(d) / "storyboard" / "k1.png").write_bytes(b"k")
+        assert SceneGenerator(d, CountingVeo(), turbo=True).build_spec(scene).turbo is True
+        assert SceneGenerator(d, CountingVeo()).build_spec(scene).turbo is None

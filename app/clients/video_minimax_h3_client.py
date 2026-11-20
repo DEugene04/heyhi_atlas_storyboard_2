@@ -25,6 +25,13 @@ Env:
   ATLAS_H3_TIMEOUT_S      per-clip wall-clock limit (default 1800)
   ATLAS_H3_REF_VIDEO_SECONDS  reference-video seconds sent (default 2; every frame is attended each step)
   ATLAS_H3_COMPRESSION    WebM quality 1-100 (default 50); lower = smaller download
+  ATLAS_H3_TURBO          "1" makes turbo the default for clips that do not choose (default off)
+  ATLAS_H3_TURBO_LORA_FL2V / _REF2V   turbo LoRA file names inside the server's --lora-model-dir
+
+Turbo mode (per clip, `turbo=True`): the task's distillation LoRA is sent in the
+structured `lora` field, with 4 steps and flow shift 6. The sd-server must be started
+with `--lora-model-dir` pointing at the LoRA files. Text-to-video has no LoRA and
+always runs the normal path.
 """
 from __future__ import annotations
 
@@ -54,6 +61,12 @@ ASPECT_RATIOS = {"21:9", "16:9", "4:3", "1:1", "3:4", "9:16"}
 DEFAULT_RESOLUTION = "480P"
 DEFAULT_STEPS = 8   # 4 steps visibly degrades 12 s clips (smeared presenter, ghosting); 8 is clean
 DEFAULT_COMPRESSION = 50
+TURBO_STEPS = 4
+TURBO_FLOW_SHIFT = 6.0
+DEFAULT_TURBO_LORAS = {                    # task -> file in the server's --lora-model-dir
+    "first-frame-to-video": "minimax_h3_fl2v_turbo_4step_v1.3_768p_bf16.safetensors",
+    "reference-to-video": "minimax_h3_ref2v_turbo_4step_v1.0_768p_bf16.safetensors",
+}
 DEFAULT_REF_VIDEO_SECONDS = 2.0            # reference-video seconds sent (24 fps frames; costly per step)
 FETCH_ATTEMPTS = 6                         # re-fetches of a finished job (server keeps it ~10 min)
 DEFAULT_TIMEOUT_S = 1800
@@ -150,7 +163,8 @@ class MinimaxH3Client:
 
     def __init__(self, *, base_url: str | None = None, fl2va_url: str | None = None,
                  resolution: str | None = None, steps: int | None = None,
-                 timeout_s: float | None = None, compression: int | None = None):
+                 timeout_s: float | None = None, compression: int | None = None,
+                 turbo: bool | None = None):
         url = base_url or os.environ.get("MINIMAX_H3_URL")
         if not url:
             raise MinimaxH3Error("MINIMAX_H3_URL is not set (e.g. http://100.104.69.66:8001)")
@@ -161,6 +175,13 @@ class MinimaxH3Client:
         self.ref_video_seconds = float(os.environ.get("ATLAS_H3_REF_VIDEO_SECONDS", DEFAULT_REF_VIDEO_SECONDS))
         self.compression = int(compression or os.environ.get("ATLAS_H3_COMPRESSION", DEFAULT_COMPRESSION))
         self.timeout_s = float(timeout_s or os.environ.get("ATLAS_H3_TIMEOUT_S", DEFAULT_TIMEOUT_S))
+        self.turbo = (os.environ.get("ATLAS_H3_TURBO", "0") == "1") if turbo is None else turbo
+        self.turbo_loras = {
+            "first-frame-to-video": os.environ.get("ATLAS_H3_TURBO_LORA_FL2V",
+                                                   DEFAULT_TURBO_LORAS["first-frame-to-video"]),
+            "reference-to-video": os.environ.get("ATLAS_H3_TURBO_LORA_REF2V",
+                                                 DEFAULT_TURBO_LORAS["reference-to-video"]),
+        }
         # The GPU server is on the private Tailscale network. A system/corporate HTTP
         # proxy cannot reach it and answers 503, so this session must ignore proxies.
         self._http = requests.Session()
@@ -177,6 +198,7 @@ class MinimaxH3Client:
         aspect_ratio: str = "16:9",
         resolution: str | None = None,
         seed: int | None = None,
+        turbo: bool | None = None,
     ) -> dict[str, Any]:
         """Run one H3 job end to end.
 
@@ -217,6 +239,13 @@ class MinimaxH3Client:
         else:
             task, base = "text-to-video", self.base_url
 
+        # Turbo: task LoRA + 4 steps. Text-to-video has no LoRA, so it stays normal.
+        lora = self.turbo_loras.get(task) if (self.turbo if turbo is None else turbo) else None
+        if lora:
+            body["lora"] = [{"path": lora, "multiplier": 1.0, "is_high_noise": False}]
+            body["sample_params"]["sample_steps"] = TURBO_STEPS
+            body["sample_params"]["flow_shift"] = TURBO_FLOW_SHIFT
+
         started = time.monotonic()
         job = self._submit(base, body)
         record = self._wait(base, job)
@@ -228,12 +257,14 @@ class MinimaxH3Client:
         logged = {k: v for k, v in body.items() if k not in ("init_image", "ref_images", "ref_videos")}
         logged["reference_video_frames"] = len(body["ref_videos"][0]) if reference_video else 0
         logged["task"] = task
+        logged["turbo"] = bool(lora)
         logged["reference_image_count"] = len(image_paths)
         return {
             "video_bytes": video,
             "job_id": job["id"],
             "task": task,
             "seed": seed,
+            "turbo": bool(lora),
             "request": logged,
             "record": {k: v for k, v in record.items() if k != "result"}
                       | {"result": {k: v for k, v in result.items() if k != "b64_json"}},
@@ -310,6 +341,7 @@ class MinimaxH3SceneClient(MinimaxH3Client):
                     self, spec.prompt, refs, first_frame=first, duration=seconds,
                     aspect_ratio=spec.aspect_ratio,
                     reference_video=spec.reference_video, seed=spec.seed,
+                    turbo=spec.turbo,
                 )
         except requests.RequestException as e:
             code = getattr(getattr(e, "response", None), "status_code", None)

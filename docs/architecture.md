@@ -279,7 +279,7 @@ where the voice ends. B-Roll is generated at 4s and trimmed down to
 `compose_veo_prompt` appends:
 
 ```
-Audio sync: The character says "<scene.text>"
+Audio sync: The character says "<scene.text>" Once the line is finished the character stays silent with their mouth closed.
 ```
 
 Which looks contradictory, since the scenes layer then mutes Veo's audio. It isn't: Veo needs
