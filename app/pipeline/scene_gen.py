@@ -112,6 +112,33 @@ def veo_generation_seconds(scene: dict) -> float:
     need = words / DirectorConfig.words_per_second + SPEECH_HEADROOM_S
     return float(min(VEO_VIDEO_SECONDS, max(VEO_BROLL_SECONDS, math.ceil(need))))
 
+def scene_ready(run_dir: str | Path, scene: dict) -> bool:
+    """A scene is finished when its final clip exists. A speaking scene's working copy
+    lands in scenes/ before the voice is laid on, so only L6's marker counts there."""
+    run_dir = Path(run_dir)
+    if scene.get("type") == "video-with-audio":
+        return external_tts.scene_is_done(run_dir, scene["id"])
+    return (run_dir / "scenes" / f"{scene['id']}.mp4").is_file()
+
+
+def continues_from(scene: dict) -> str | None:
+    """Id of the earlier scene whose last frame seeds this one, or None."""
+    kind, rid = _ref_id(scene.get("reference_from", ""))
+    return rid if kind == "scene" else None
+
+
+def continuations_of(blueprint: dict, scene_id: str) -> list[str]:
+    """Ids of every scene that continues, directly or through a chain, from `scene_id`
+    - the scenes that go stale when `scene_id` is regenerated."""
+    stale: set[str] = {scene_id}
+    out: list[str] = []
+    for sc in blueprint.get("scenes", []):
+        if continues_from(sc) in stale:
+            stale.add(sc["id"])
+            out.append(sc["id"])
+    return out
+
+
 # Convert scene from blueprint into mp4
 class SceneGenerator:
     def __init__(self, run_dir: str | Path, client: VeoClient,
@@ -267,11 +294,19 @@ class SceneGenerator:
                     self._finish_from_raw(scene, voice_for, audio)
                 out.append(self.scenes_dir / f"{sid}.mp4")
                 continue
-            self.generate_scene(scene)                        # L5 (+ pristine veo_raw)
-            if scene.get("type") == "video-with-audio":
-                audio.process(raw, scene, voice_for(scene), self.run)  # L6 -> scenes/<id>.mp4
-            out.append(self.scenes_dir / f"{sid}.mp4")
+            out.append(self.run_one(scene, voice_for, audio))
         return out
+
+    def run_one(self, scene: dict, voice_for, audio) -> Path:
+        """Generate one scene end to end: L5, then L6 for a speaking scene.
+
+        Always calls the video model - this is the single place a scene is paid for,
+        used by run_all and by regenerating one scene on its own."""
+        self.generate_scene(scene)                        # L5 (+ pristine veo_raw)
+        if scene.get("type") == "video-with-audio":
+            audio.process(self.raw_dir / f"{scene['id']}.mp4", scene,
+                          voice_for(scene), self.run)     # L6 -> scenes/<id>.mp4
+        return self.scenes_dir / f"{scene['id']}.mp4"
 
     def rerender_tts(self, blueprint: dict, voice_for, audio) -> list[Path]:
         """Re-run ONLY L6 from the preserved veo_raw/ clips. No Veo call, no

@@ -30,7 +30,7 @@ input,textarea,select{border:1px solid var(--line);border-radius:10px;padding:10
 .input-action{display:flex;gap:10px}
 .button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 18px;font-weight:600}
 .button.primary{background:var(--green);color:#fff;border-color:var(--green)}.button.secondary{background:var(--green2);color:var(--green);border-color:var(--green2)}
-.button.danger{background:#fff;color:var(--red);border-color:var(--red)}.button:disabled{opacity:.5;cursor:not-allowed}
+.button.small{padding:5px 12px;font-size:.85rem}.button.danger{background:#fff;color:var(--red);border-color:var(--red)}.button:disabled{opacity:.5;cursor:not-allowed}
 .approval-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:16px}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .cost-hint{font-size:.85rem;color:var(--muted)}
 .metric-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}

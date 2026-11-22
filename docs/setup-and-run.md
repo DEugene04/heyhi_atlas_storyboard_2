@@ -477,6 +477,19 @@ than a guess:
 | `force=true`    | throw it all away and regenerate       | you edited the blueprint  |
 | `tts_only=true` | replay L6 over `veo_raw/`, no Veo call | tuning voice or subtitles |
 
+**One scene at a time.** `POST /pipeline/scenes` with `"scene_id": "<id>"` generates
+(or, if it already exists, regenerates) just that scene — video, then voice for a
+speaking scene — with no `409` for other scenes already on disk. Add `tts_only=true`
+to redo only that scene's voice on its existing clip. `scene_id` already means "redo
+this scene", so combining it with `force` or `resume` is a `422`. Two rules follow
+from scenes chaining on each other:
+
+- A scene whose `reference_from` is `scene:<prev>` is seeded from `<prev>`'s last
+  frame, so it answers `409` until `<prev>` is finished.
+- Regenerating `<prev>` makes every finished scene that continued from it stale. The
+  response lists them in `stale_dependents`; regenerate those to follow on from the
+  new clip. The Studio's Scenes table has a Generate / Regenerate / Re-voice button per row.
+
 Resume looks only at whether files exist. It cannot tell that a prompt changed,
 so after editing a blueprint the flag you want is `force`.
 

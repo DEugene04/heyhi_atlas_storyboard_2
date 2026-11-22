@@ -90,7 +90,9 @@ from app.clients.sts_elevenlabs_client import STSError, ElevenLabsSTSClient
 from app.pipeline.external_tts import L6Error
 from app.pipeline.audio_providers import DIARIZERS, PROVIDERS, resolve_voices
 from app.pipeline.video_providers import VIDEO_PROVIDERS
-from app.pipeline.scene_gen import SceneGenerator
+from app.pipeline.scene_gen import (
+    SceneGenerator, continuations_of, continues_from, scene_ready,
+)
 from app.utils.ffmpeg_utils import FfmpegError
 from app.utils.io_utils import atomic_write_text
 
@@ -193,7 +195,6 @@ def _run_status(d: Path) -> dict:
     checks of the endpoints above, so 'selected' means /pipeline/assets will
     accept the run, and so on."""
     from app import costs
-    from app.pipeline.external_tts import scene_is_done
 
     bp = _read_json(d / "blueprint.json")
     scenes = []
@@ -202,17 +203,15 @@ def _run_status(d: Path) -> dict:
                       for e in costs.load(d) if e.get("layer") == "L5"}
     for sc in (bp or {}).get("scenes", []):
         sid = sc["id"]
-        speaking = sc.get("type") == "video-with-audio"
         scenes.append({
             "id": sid,
             "type": sc.get("type"),
             "topic": sc.get("topic"),
             "raw": (d / "veo_raw" / f"{sid}.mp4").is_file(),
             "turbo": turbo_by_scene.get(sid),
-            # a speaking scene is only finished once L6 wrote its marker; the
-            # working copy in scenes/ exists earlier, before the voice is laid on
-            "ready": scene_is_done(d, sid) if speaking
-                     else (d / "scenes" / f"{sid}.mp4").is_file(),
+            "ready": scene_ready(d, sc),
+            # earlier scene whose last frame seeds this one: it must exist first
+            "continues_from": continues_from(sc),
         })
 
     flags = {
@@ -657,6 +656,9 @@ def _library_file(root: Path, name: str) -> Path | None:
 def run_scenes(body: ScenesIn) -> ScenesOut:
     d = _run_dir(body.run_id)
     _check_force_resume(body)
+    if body.scene_id and (body.force or body.resume):
+        raise HTTPException(
+            422, "scene_id already means 'redo just this scene' - don't combine it with force or resume")
     if not (d / "selections.json").is_file():
         raise HTTPException(409, "run /pipeline/select first (resolved blueprint required)")
     bg_dir = d / "backgrounds"
@@ -664,16 +666,36 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
         raise HTTPException(409, "run /pipeline/assets first (backgrounds/storyboards required)")
     scenes_dir = d / "scenes"
 
-    if not body.tts_only:
+    full_bp = json.loads((d / "blueprint.json").read_text(encoding="utf-8"))
+    # A single-scene request works on a blueprint holding just that scene, so voice
+    # checks and the generator never touch the others.
+    bp = full_bp
+    target = None
+    if body.scene_id:
+        target = next((sc for sc in full_bp.get("scenes", []) if sc["id"] == body.scene_id), None)
+        if target is None:
+            raise HTTPException(404, f"scene '{body.scene_id}' is not in this blueprint")
+        bp = {**full_bp, "scenes": [target]}
+        prev_id = continues_from(target)
+        if prev_id and not body.tts_only:
+            prev = next((sc for sc in full_bp["scenes"] if sc["id"] == prev_id), None)
+            if prev is None or not scene_ready(d, prev):
+                raise HTTPException(
+                    409, f"scene '{body.scene_id}' continues from '{prev_id}' - generate "
+                         f"'{prev_id}' first, so its last frame can seed this one")
+
+    if body.tts_only:
+        raw_dir = d / "veo_raw"
+        have_raw = ((raw_dir / f"{body.scene_id}.mp4").is_file() if body.scene_id
+                    else raw_dir.is_dir() and any(raw_dir.glob("*.mp4")))
+        if not have_raw:
+            raise HTTPException(409, "no raw video clip for "
+                                f"{'scene ' + repr(body.scene_id) if body.scene_id else 'this run'}"
+                                " - generate it first (tts_only needs veo_raw/)")
+    elif not body.scene_id:
         if (scenes_dir.is_dir() and any(scenes_dir.glob("*.mp4"))
                 and not (body.force or body.resume)):
             raise HTTPException(409, "scenes exist - pass resume=true to generate only what is missing, force=true to regenerate everything, or tts_only=true to re-render TTS")
-    else:
-        raw_dir = d / "veo_raw"
-        if not (raw_dir.is_dir() and any(raw_dir.glob("*.mp4"))):
-            raise HTTPException(409, "no raw Veo clips - run /pipeline/scenes first (tts_only needs veo_raw/)")
-
-    bp = json.loads((d / "blueprint.json").read_text(encoding="utf-8"))
 
     sel = json.loads((d / "selections.json").read_text(encoding="utf-8"))
     voice_source = sel.get("voice_source", "index")
@@ -712,6 +734,8 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
     try:
         if body.tts_only:
             paths = gen.rerender_tts(bp, voice_for=voice_for, audio=audio)
+        elif target is not None:
+            paths = [gen.run_one(target, voice_for, audio)]
         else:
             paths = gen.run_all(bp, voice_for=voice_for, audio=audio, resume=body.resume)
     except (VeoError, L6Error, TTSError, STSError, FfmpegError) as e:
@@ -722,9 +746,13 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
     # reports those here too. Previously this summed Veo lines only and called the
     # result a total.
     from app.costs import summarize
+    by_id = {sc["id"]: sc for sc in full_bp.get("scenes", [])}
+    stale = ([sid for sid in continuations_of(full_bp, body.scene_id)
+              if scene_ready(d, by_id[sid])] if body.scene_id else [])
     return ScenesOut(run_id=body.run_id, scenes_dir=str(scenes_dir),
                      scenes=len(paths), reused=len(gen.reused),
-                     total_cost_usd=round(summarize(d)["total_usd"], 4))
+                     total_cost_usd=round(summarize(d)["total_usd"], 4),
+                     stale_dependents=stale)
 
 # ----------------------------------------------------------------------
 # Layer 7 — music generation (Google Lyria). NETWORK + CREDITS.

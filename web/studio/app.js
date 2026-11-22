@@ -437,33 +437,57 @@ function renderScenes() {
          done ? h("button", { class: "button primary", onclick: () => go(6) }, "Continue →") : null])));
 
   const pct = s.scenes_total ? Math.round(100 * s.scenes_ready / s.scenes_total) : 0;
+  const readyIds = new Set(s.scene_states.filter(x => x.ready).map(x => x.id));
+  // One scene on its own: it may be generated or redone without touching the rest. A
+  // scene that continues from an earlier one needs that one first (its last frame is the seed).
+  const sceneActions = sc => {
+    const blocker = sc.continues_from && !readyIds.has(sc.continues_from) ? sc.continues_from : null;
+    const btn = (label, cls, mode, title) => h("button", {
+      class: `button ${cls} small`, disabled: state.working || (mode !== "tts_only" && !!blocker),
+      title: (mode !== "tts_only" && blocker) ? `Generate ${blocker} first - this scene continues from its last frame` : title,
+      onclick: () => genScenes(mode, sc.id),
+    }, label);
+    return h("div", { class: "actions" },
+      sc.ready ? btn("Regenerate", "danger", "force", "Run the video model again for this scene only")
+               : btn("Generate", "primary", "new", "Generate this scene only"),
+      sc.type !== "B-Roll" && sc.raw ? btn("Re-voice", "secondary", "tts_only", "Redo the voice on the existing clip - no video generation") : null,
+      blocker ? h("small", { class: "muted" }, `needs ${blocker}`) : null);
+  };
   kids.push(h("div", { class: "panel" }, h("div", { class: "progress" }, h("i", { style: `width:${pct}%` })),
-    h("table", {}, h("thead", {}, h("tr", {}, ["Scene", "Type", "Mode", "Video clip", "Voiced / ready", "Preview"].map(t => h("th", {}, t)))),
+    h("table", {}, h("thead", {}, h("tr", {}, ["Scene", "Type", "Mode", "Video clip", "Voiced / ready", "Preview", "This scene"].map(t => h("th", {}, t)))),
       h("tbody", {}, s.scene_states.map(sc => h("tr", {},
         h("td", {}, sc.id),
         h("td", {}, h("span", { class: `tag${sc.type === "B-Roll" ? " broll" : ""}` }, sc.type === "B-Roll" ? "B-Roll" : "Speaking")),
         h("td", {}, sc.turbo == null ? "—" : sc.turbo ? "Turbo" : "Normal"),
         h("td", {}, sc.raw ? "✓" : "…"), h("td", {}, sc.ready ? "✓" : "…"),
-        h("td", {}, sc.ready ? h("video", { src: media(`scenes/${sc.id}.mp4`), controls: true, preload: "none", width: 200 }) : "—")))))));
+        h("td", {}, sc.ready ? h("video", { src: media(`scenes/${sc.id}.mp4`), controls: true, preload: "none", width: 200 }) : "—"),
+        h("td", {}, sceneActions(sc))))))));
   el.replaceChildren(...kids);
 }
 
-function genScenes(mode) {
-  if (mode === "force" && !confirm("Regenerate EVERY scene? This re-runs MiniMax H3 for all scenes and spends credits again.")) return;
+// `sceneId` limits the run to that one scene; without it the whole run is processed.
+function genScenes(mode, sceneId) {
+  if (mode === "force" && !confirm(sceneId
+      ? `Regenerate ${sceneId}? This re-runs MiniMax H3 for this scene and spends credits again.`
+      : "Regenerate EVERY scene? This re-runs MiniMax H3 for all scenes and spends credits again.")) return;
   const body = {
     run_id: state.runId, tts_provider: "elevenlabs", video_provider: "minimax_h3",
     diarizer: $("#diarizer")?.value || "gemini", turbo: !!state.turbo,
-    force: mode === "force", resume: mode === "resume", tts_only: mode === "tts_only",
+    // scene_id already means "just this scene", so it replaces force/resume.
+    force: !sceneId && mode === "force", resume: mode === "resume", tts_only: mode === "tts_only",
   };
+  if (sceneId) body.scene_id = sceneId;
   // Synchronous POST; progress comes from polling /status, which the server
   // answers concurrently because handlers run in the threadpool.
   state.poll = setInterval(async () => {
     try { state.status = await api(`/status?run_id=${state.runId}`); renderScenes(); renderNav(); } catch { /* transient */ }
   }, 3000);
-  return run("Generating scenes", "", async () => {
+  return run(sceneId ? `Generating ${sceneId}` : "Generating scenes", "", async () => {
     const out = await post("/scenes", body);
     state.bust = Date.now();
-    notice(`Scenes done. Run total so far: $${out.total_cost_usd.toFixed(2)}${out.reused ? ` (${out.reused} reused)` : ""}.`);
+    const stale = out.stale_dependents?.length
+      ? ` ${out.stale_dependents.join(", ")} continued from this scene's old last frame - regenerate ${out.stale_dependents.length > 1 ? "them" : "it"} to follow on from the new one.` : "";
+    notice(`${sceneId ? `${sceneId} done.` : "Scenes done."} Run total so far: $${out.total_cost_usd.toFixed(2)}${out.reused ? ` (${out.reused} reused)` : ""}.${stale}`);
   }, { overlay: false }).finally(() => { clearInterval(state.poll); state.poll = null; });
 }
 

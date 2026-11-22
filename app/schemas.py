@@ -311,6 +311,9 @@ class ScenesIn(BaseModel):
     force: bool = False
     resume: bool = False          # keep clips already in veo_raw/; generate the rest
     tts_only: bool = False        # reuse veo_raw/ clips; re-run L6 only (no Veo)
+    # Do the work for this one scene only. It already means "regenerate this scene", so
+    # it replaces force/resume rather than combining with them.
+    scene_id: str | None = None
     tts_provider: Literal["azure", "elevenlabs"] = "elevenlabs"
     video_provider: Literal["minimax_h3", "gemini"] = "minimax_h3"   # gemini = legacy Veo
     # H3 only. File names inside the shared _storage/image_library and video_library.
@@ -328,6 +331,9 @@ class ScenesOut(BaseModel):
     scenes: int
     total_cost_usd: float
     reused: int = 0               # scenes whose Veo call was skipped (resume)
+    # Single-scene runs: finished scenes that continue from the one just redone. Their
+    # first frame came from the old clip, so they no longer follow on from it.
+    stale_dependents: list[str] = []
 
 class MusicIn(BaseModel):
     run_id: str
