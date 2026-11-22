@@ -570,7 +570,7 @@ async function loadRuns() {
   try {
     const runs = await api("/runs");
     picker.replaceChildren(h("option", { value: "" }, runs.length ? "Choose a run…" : "No previous runs"),
-      runs.map(r => h("option", { value: r.run_id, selected: r.run_id === state.runId },
+      ...runs.map(r => h("option", { value: r.run_id, selected: r.run_id === state.runId },
         `${r.run_id} · ${r.title || "untitled"} · ${r.stage}`)));
   } catch (e) { notice(`Could not list runs: ${e.message}`, true); }
 }
