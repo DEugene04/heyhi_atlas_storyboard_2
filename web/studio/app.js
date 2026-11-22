@@ -85,6 +85,24 @@ function showBusy(title, text) {
 }
 const hideBusy = () => $("#busy").classList.add("hidden");
 
+// In-page replacement for window.confirm(). The native popup returns false without
+// showing anything once a browser suppresses dialogs (or in an embedded browser that
+// has none), which made a paid button look dead: no prompt, no request.
+function confirmAction(message, okLabel = "Continue") {
+  return new Promise(resolve => {
+    const done = answer => { document.removeEventListener("keydown", onKey); overlay.remove(); resolve(answer); };
+    const onKey = e => { if (e.key === "Escape") done(false); };
+    const overlay = h("div", { class: "busy", role: "alertdialog", "aria-modal": "true" },
+      h("div", { class: "busy-card" },
+        h("p", { style: "white-space:pre-line;color:inherit" }, message),
+        h("div", { class: "actions", style: "justify-content:center;margin-top:18px" },
+          h("button", { class: "button secondary", onclick: () => done(false) }, "Cancel"),
+          h("button", { class: "button danger", onclick: () => done(true) }, okLabel))));
+    document.addEventListener("keydown", onKey);
+    document.body.append(overlay);
+  });
+}
+
 // Run one action with the page locked. Paid actions only ever run from a click.
 async function run(title, text, fn, { overlay = true } = {}) {
   if (state.working) return;
@@ -270,8 +288,8 @@ function renderDirector() {
 
 const metric = (label, value) => h("div", {}, h("span", {}, label), h("strong", {}, String(value)));
 
-function generateBlueprint(force) {
-  if (force && !confirm("Regenerate the blueprint?\n\nThis spends credits and DELETES your character/voice selection for this run. Generated assets are not removed but may no longer match.")) return;
+async function generateBlueprint(force) {
+  if (force && !await confirmAction("Regenerate the blueprint?\n\nThis spends credits and DELETES your character/voice selection for this run. Generated assets are not removed but may no longer match.", "Regenerate")) return;
   return run("Directing", "GPT-4o is writing the blueprint (can take a minute).", async () => {
     await post("/direct", { run_id: state.runId, force });
     state.cast = {};
@@ -400,8 +418,8 @@ function gallery(dir, ids) {
     h("figcaption", {}, id))));
 }
 
-function genAssets(mode) {
-  if (mode === "force" && !confirm("Regenerate ALL backgrounds and storyboards? This spends credits again.")) return;
+async function genAssets(mode) {
+  if (mode === "force" && !await confirmAction("Regenerate ALL backgrounds and storyboards? This spends credits again.", "Regenerate")) return;
   return run("Generating assets", "Painting backgrounds and storyboards…", async () => {
     await post("/assets", { run_id: state.runId, force: mode === "force", resume: mode === "resume" });
     state.bust = Date.now();
@@ -466,10 +484,10 @@ function renderScenes() {
 }
 
 // `sceneId` limits the run to that one scene; without it the whole run is processed.
-function genScenes(mode, sceneId) {
-  if (mode === "force" && !confirm(sceneId
+async function genScenes(mode, sceneId) {
+  if (mode === "force" && !await confirmAction(sceneId
       ? `Regenerate ${sceneId}? This re-runs MiniMax H3 for this scene and spends credits again.`
-      : "Regenerate EVERY scene? This re-runs MiniMax H3 for all scenes and spends credits again.")) return;
+      : "Regenerate EVERY scene? This re-runs MiniMax H3 for all scenes and spends credits again.", "Regenerate")) return;
   const body = {
     run_id: state.runId, tts_provider: "elevenlabs", video_provider: "minimax_h3",
     diarizer: $("#diarizer")?.value || "gemini", turbo: !!state.turbo,
@@ -507,8 +525,8 @@ function renderMusic() {
   el.replaceChildren(...kids);
 }
 
-function genMusic(force) {
-  if (force && !confirm("Replace the existing music track? This spends credits.")) return;
+async function genMusic(force) {
+  if (force && !await confirmAction("Replace the existing music track? This spends credits.", "Replace")) return;
   return run("Generating music", "Lyria is composing…", async () => {
     await post("/music", { run_id: state.runId, force });
     state.bust = Date.now();
