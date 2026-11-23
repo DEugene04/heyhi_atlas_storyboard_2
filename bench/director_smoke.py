@@ -1,7 +1,7 @@
 """
 director_smoke.py — ONE live call to the v2.1 director, so you can eyeball
 whether Gemini 2.5 Flash produces blueprints matching the new schema
-(style + characters + backgrounds + scenes + storyboard).
+(style + characters + backgrounds + scenes + start_frame).
 
 Use to run the director layer only seperately.
 
@@ -42,7 +42,7 @@ def _summary(bp) -> str:
     rows = [
         f"style: {bp.style[:80]}{'...' if len(bp.style) > 80 else ''}",
         f"backgrounds: {[b.id for b in bp.backgrounds]}",
-        f"storyboard : {[sb.id for sb in bp.storyboard]}",
+        f"start_frame: {[sf.id for sf in bp.start_frame]}",
         f"scenes     : {len(bp.scenes)}",
     ]
     for s in bp.scenes:
@@ -81,7 +81,7 @@ def main() -> int:
 
     print(
         "\nEyeball check: opening and closing B-Roll present? each video-with-audio <= 20 words? "
-        "every scene's reference_from resolves? every storyboard reference id exists?"
+        "every scene's reference_from resolves? every start_frame reference id exists?"
     )
     return 0
 

@@ -2,7 +2,7 @@
 app/clients/video_veo_client.py
 
 Wrap the Veo generation call (submit job, return the resulting MP4 bytes). 
-Reference-to-video (Fast) attaches reference images (storyboard);
+Reference-to-video (Fast) attaches reference images (no longer used by the Studio pipeline);
 image-to-video (Lite) attaches a single seed image (backgrounds or scenes).
 
 Retry transient (5xx / timeout) failures up to N times with exponential

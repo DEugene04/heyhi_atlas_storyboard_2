@@ -33,15 +33,15 @@
     },
     {
       "id": "scene_002",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "Welcome to TechNova Solutions. This Human Resources Policy Manual is designed to provide employees with a clear understanding.",
-      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a friendly and professional figure, standing in a modern office lobby. Action: char_narrator gestures with an open hand, then smiles warmly, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference. Context: A bright, contemporary office lobby with soft lighting. Style and Ambience: Welcoming and informative mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Soft, ambient office sounds. Language: english",
+      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a friendly and professional figure, standing in a modern office lobby. Action: char_narrator gestures with an open hand, then smiles warmly, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Context: A bright, contemporary office lobby with soft lighting. Style and Ambience: Welcoming and informative mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Soft, ambient office sounds. Language: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_intro",
+      "reference_from": "start_frame:sf_intro",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 7.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
       "characters": [
@@ -64,7 +64,7 @@
       "reference_from": "scene:scene_002",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
       "characters": [
@@ -87,7 +87,7 @@
       "reference_from": "scene:scene_003",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
       "characters": [
@@ -110,7 +110,7 @@
       "reference_from": "scene:scene_004",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
       "characters": [
@@ -133,7 +133,7 @@
       "reference_from": "scene:scene_005",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
       "characters": [
@@ -156,7 +156,7 @@
       "reference_from": "scene:scene_006",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
       "characters": [
@@ -187,15 +187,15 @@
     },
     {
       "id": "scene_009",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "TechNova Solutions is fundamentally committed to the principle of equal employment opportunity.",
-      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a professional figure, standing in a modern meeting room. Action: char_narrator makes a firm, open-handed gesture of commitment, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference. Context: A clean, well-lit meeting room with a large table. Style and Ambience: Serious and committed mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Quiet hum of a projector, distant office sounds. Language: english",
+      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a professional figure, standing in a modern meeting room. Action: char_narrator makes a firm, open-handed gesture of commitment, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Context: A clean, well-lit meeting room with a large table. Style and Ambience: Serious and committed mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Quiet hum of a projector, distant office sounds. Language: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_eeo",
+      "reference_from": "start_frame:sf_eeo",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Equal Employment Opportunity (EEO)",
       "characters": [
@@ -218,7 +218,7 @@
       "reference_from": "scene:scene_009",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Equal Employment Opportunity (EEO)",
       "characters": [
@@ -241,7 +241,7 @@
       "reference_from": "scene:scene_010",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Equal Employment Opportunity (EEO)",
       "characters": [
@@ -264,7 +264,7 @@
       "reference_from": "scene:scene_011",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Equal Employment Opportunity (EEO)",
       "characters": [
@@ -287,7 +287,7 @@
       "reference_from": "scene:scene_012",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Equal Employment Opportunity (EEO)",
       "characters": [
@@ -310,7 +310,7 @@
       "reference_from": "scene:scene_013",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Equal Employment Opportunity (EEO)",
       "characters": [
@@ -333,7 +333,7 @@
       "reference_from": "scene:scene_014",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Equal Employment Opportunity (EEO)",
       "characters": [
@@ -364,15 +364,15 @@
     },
     {
       "id": "scene_017",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "We strive to maintain a work environment that fosters mutual employee respect.",
-      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a professional figure, standing in a modern office setting. Action: char_narrator holds both hands up in a 'stop' gesture, then places a hand over their heart to convey sincerity, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference. Context: A bright, contemporary office lobby with soft lighting. Style and Ambience: Empathetic and firm mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Soft, ambient office sounds. Language: english",
+      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a professional figure, standing in a modern office setting. Action: char_narrator holds both hands up in a 'stop' gesture, then places a hand over their heart to convey sincerity, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Context: A bright, contemporary office lobby with soft lighting. Style and Ambience: Empathetic and firm mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Soft, ambient office sounds. Language: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_harassment",
+      "reference_from": "start_frame:sf_harassment",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -395,7 +395,7 @@
       "reference_from": "scene:scene_017",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -418,7 +418,7 @@
       "reference_from": "scene:scene_018",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -441,7 +441,7 @@
       "reference_from": "scene:scene_019",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -464,7 +464,7 @@
       "reference_from": "scene:scene_020",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -487,7 +487,7 @@
       "reference_from": "scene:scene_021",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -510,7 +510,7 @@
       "reference_from": "scene:scene_022",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -533,7 +533,7 @@
       "reference_from": "scene:scene_023",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -556,7 +556,7 @@
       "reference_from": "scene:scene_024",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 4.0,
       "aspect_ratio": "16:9",
       "topic": "Anti-Harassment and Bullying Policy",
       "characters": [
@@ -586,29 +586,26 @@
       "audios": []
     }
   ],
-  "storyboard": [
+  "start_frame": [
     {
-      "id": "sb_intro",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator stands confidently, gesturing with an open hand towards the viewer; in the background, a modern office lobby. Panel 2 (top-right, 00:02-00:04): char_narrator smiles warmly, looking directly at the viewer, with hands clasped loosely in front. Panel 3 (bottom-left, 00:04-00:06): char_narrator gestures towards an unseen group, indicating inclusion and teamwork. Panel 4 (bottom-right, 00:06-00:08): char_narrator nods reassuringly, maintaining eye contact with the viewer. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
+      "id": "sf_intro",
+      "prompt": "char_narrator stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
       "reference": [
         "char_narrator",
         "bg_office_lobby"
       ]
     },
     {
-      "id": "sb_eeo",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator stands in a modern meeting room, making a firm, open-handed gesture of commitment; in the background, a clean meeting room. Panel 2 (top-right, 00:02-00:04): char_narrator looks serious and focused, shaking their head slightly to emphasize a point. Panel 3 (bottom-left, 00:04-00:06): char_narrator extends an open hand, palm up, as if offering support or inclusion. Panel 4 (bottom-right, 00:06-00:08): char_narrator points to an imaginary chart or document, illustrating a comprehensive policy. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
+      "id": "sf_eeo",
+      "prompt": "char_narrator stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
       "reference": [
         "char_narrator",
         "bg_meeting_room"
       ]
     },
     {
-      "id": "sb_harassment",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator stands with a serious expression, holding both hands up in a 'stop' gesture; in the background, a modern office setting. Panel 2 (top-right, 00:02-00:04): char_narrator looks empathetic, placing a hand over their heart. Panel 3 (bottom-left, 00:04-00:06): char_narrator points firmly towards an unseen reporting mechanism or person. Panel 4 (bottom-right, 00:06-00:08): char_narrator gives a reassuring nod, indicating safety and protection. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
+      "id": "sf_harassment",
+      "prompt": "char_narrator stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
       "reference": [
         "char_narrator",
         "bg_office_lobby"

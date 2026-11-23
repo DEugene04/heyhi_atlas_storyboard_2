@@ -12,7 +12,7 @@ and expects one problem is measuring exactly that rule and nothing else. A
 synthetic fixture would drift away from what Gemini actually emits; this one
 cannot, because it IS what Gemini emitted.
 
-16 scenes, 5 topics, each opened by a storyboard-referenced scene, continued by
+16 scenes, 5 topics, each opened by a start_frame-referenced scene, continued by
 a scene: chain, and closed by a closing B-Roll.
 """
 from __future__ import annotations

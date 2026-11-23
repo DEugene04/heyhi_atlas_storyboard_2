@@ -38,7 +38,7 @@ endpoint, each reading what the previous one left on disk.
                        │      pipeline/image_gen.py      │
                        └───────────────┬─────────────────┘
                                        │
-                            backgrounds/*.png, storyboard/*.png
+                            backgrounds/*.png, start_frame/*.png
                                        │
               ┌────────────────────────▼────────────────────────┐
               │  L5 ⇄ L6  INTERLEAVED, ONE SCENE AT A TIME      │
@@ -107,7 +107,7 @@ app/
     director.py        L2        DIRECTOR_RULES, validate_blueprint, the retry loop,
                                  the reference_from grammar, blueprint_type rules
     patch_blueprint.py L3        placeholder char_ids -> real library ids (has a CLI)
-    image_gen.py       L4        backgrounds then storyboards (order matters)
+    image_gen.py       L4        backgrounds then start frames (order matters)
     scene_gen.py       L5        Veo routing, the L5⇄L6 loop, cost logging
     external_tts.py    L6        Azure path: TTS per phrase + diarize + align
     sts_elevenlabs.py  L6        ElevenLabs path: voice conversion (DEFAULT)
@@ -147,7 +147,7 @@ network.
 | Provider                    | Called from                                           | Cost per run                                    |
 | --------------------------- | ----------------------------------------------------- | ----------------------------------------------- |
 | Gemini 2.5 Flash (director) | `director.GeminiDirector.complete`                    | 1 call per attempt, up to `max_retries + 1`     |
-| OpenAI gpt-image-2          | `image_gen.OpenAIImageClient.generate`                | 1 per background + 1 per storyboard (+ retries) |
+| OpenAI gpt-image-2          | `image_gen.OpenAIImageClient.generate`                | 1 per background + 1 per start frame (+ retries) |
 | Veo 3.1 Fast / Lite         | `video_veo_client.GeminiVeoClient.generate`           | 1 per scene                                     |
 | ElevenLabs STS              | `sts_elevenlabs_client.ElevenLabsSTSClient.convert`   | 1 per speaking scene                            |
 | Azure TTS                   | `tts_azure_client.AzureTTSClient.tts`                 | 1 **per phrase** per speaking scene             |
@@ -233,13 +233,15 @@ Validated here: every char_id exists in the library, every blueprint placeholder
 assigned exactly once, no extras, and one character never maps to two voices.
 
 > `apply_selection` rewrites ids in `scene.characters`, `scene.audios[].char_id`
-> and `storyboard[].reference`. It does **not** rewrite prompt prose. See
+> and `start_frame[].reference`. It does **not** rewrite prompt prose. See
 > [open-questions.md](open-questions.md#1-decided--placeholder-char_ids-leak-into-veo-prompts).
 
 ### L4 — asset generation
 
-`POST /pipeline/assets` generates **backgrounds first, then storyboards** — a hard
-dependency, since storyboard prompts attach background PNGs as reference images.
+`POST /pipeline/assets` generates **backgrounds first, then start frames** — a hard
+dependency, since each start-frame prompt attaches a background PNG (and the
+group's character PNG) as reference images. There is one start frame per group
+(the scenes between two B-Rolls).
 
 The style is applied here and nowhere else. The director is forbidden from writing
 art-style words into individual prompts (AI RULE #7), so the art direction lives
@@ -252,9 +254,9 @@ final_prompt = f"{bp['style']}, {entry['prompt']}"
 Change `bp['style']` and every image in the run changes together.
 
 **Characters are not generated.** The user's library PNG is attached as a reference
-to each storyboard the character appears in. So character consistency rests on a
-two-hop chain — library PNG → storyboard grid → Veo clip — and neither hop is
-verified. In practice the storyboard hop is where likeness drifts.
+to the start frame of each group the character fronts. So character consistency
+rests on a two-hop chain — library PNG → start frame → video clip — and neither hop
+is verified.
 
 ### L5 ⇄ L6 — scenes and voice, interleaved
 
@@ -266,7 +268,7 @@ time — the last gate before a billable call:
 
 | `reference_from`     | Veo task           | Model            | Input attached                       |
 | -------------------- | ------------------ | ---------------- | ------------------------------------ |
-| `storyboard:<sb_id>` | reference-to-video | Veo 3.1 **Fast** | `storyboard/<id>.png` as a reference |
+| `start_frame:<sf_id>`| image-to-video     | Veo 3.1 **Lite** | `start_frame/<id>.png` as the seed   |
 | `background:<bg_id>` | image-to-video     | Veo 3.1 **Lite** | `backgrounds/<id>.png` as the seed   |
 | `scene:<prev_id>`    | image-to-video     | Veo 3.1 **Lite** | last frame of `scenes/<prev>.mp4`    |
 

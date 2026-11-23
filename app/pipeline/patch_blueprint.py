@@ -7,7 +7,7 @@ library characters and voices.
 Updates:
 - scene.characters
 - scene.audios[].char_id / audio_id
-- storyboard[].reference
+- start_frame[].reference
 
 The original blueprint is preserved as `blueprint.placeholder.json` so the
 patch can be safely reapplied after changing selections.
@@ -59,8 +59,8 @@ def apply_selection(blueprint: dict, selections: list[dict]) -> tuple[dict, list
         sc["audios"] = new_audios
 
     # Replace character placeholders while leaving background IDs unchanged.
-    for sb in bp.get("storyboard", []):
-        sb["reference"] = [ph_to_char.get(r, r) for r in sb.get("reference", [])]
+    for sf in bp.get("start_frame", []):
+        sf["reference"] = [ph_to_char.get(r, r) for r in sf.get("reference", [])]
 
     return bp, problems
 

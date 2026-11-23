@@ -32,11 +32,11 @@ blueprint shape needs more than a new enum value.
 4. A second rules constant and a second `build_*_prompt`. Don't add branches inside
    `DIRECTOR_RULES` — it's already at the limit of what one prompt can hold, and the
    validator is keyed to its exact structure.
-5. A second validator. `validate_blueprint` assumes the storyboard/speaking/B-Roll
-   topology throughout; a blueprint with no characters and no storyboards would trip
+5. A second validator. `validate_blueprint` assumes the start_frame/speaking/B-Roll
+   topology throughout; a blueprint with no characters and no start frames would trip
    dozens of rules that don't apply. This is the real work.
 6. A second blueprint model, or optional fields on `VideoBlueprint`. Note that
-   `character_count`, `music_style`, `backgrounds`, `scenes` and `storyboard` are all
+   `character_count`, `music_style`, `backgrounds`, `scenes` and `start_frame` are all
    currently required.
 7. Dispatch in `main.run_director` on `config.blueprint_type`.
 8. Check every downstream layer's assumptions. `/pipeline/select` requires at least
@@ -89,14 +89,14 @@ image. The chain is:
 character_library/<char_id>.png
         │  attached as a reference image at L4
         ▼
-run_0X/storyboard/<sb_id>.png       (2×2 grid, Gemini re-draws the character)
-        │  attached as the reference for Veo
+run_0X/start_frame/<sf_id>.png      (one frame, the image model re-draws the character)
+        │  used as the first frame of the group's first scene
         ▼
 run_0X/scenes/<scene_id>.mp4
 ```
 
 Consistency depends on each hop preserving likeness, and **neither is verified**.
-The storyboard hop is where drift enters — Gemini re-draws rather than composites.
+The start-frame hop is where drift enters — the image model re-draws rather than composites.
 
 There is **no `char_manager` module** in this repo, despite it being referenced in
 older notes. The character logic is spread across four places:
@@ -117,16 +117,15 @@ it'll be wiped on the next scan.
 
 **Use character metadata in prompts** — nothing reads `description` or `tags` today.
 They're returned by the API for the front-end to display, and that's it. The
-interesting version of this is feeding `description` into the storyboard prompt at
+interesting version of this is feeding `description` into the start-frame prompt at
 L4 so the text reinforces the reference image; that's a change in
-`image_gen.generate_storyboards`, and `_compose_prompt` is the natural place to hang
+`image_gen.generate_start_frames`, and `_compose_prompt` is the natural place to hang
 it.
 
 **Improve consistency** — the leverage is at L4, not L2. Options, roughly in order
 of effort: strengthen the "character design and wardrobe identical across panels"
-language in the storyboard template; attach the character PNG to the **scene** as
-well as the storyboard (needs a `VeoJobSpec.references` change on the image-to-video
-path, which today carries only a single seed); or generate a per-run character sheet
+language in the start-frame template; the character PNG already reaches the clip
+through the start frame (the video request carries a single seed image); or generate a per-run character sheet
 from the library PNG and reference that instead.
 
 **Change how references resolve** — `image_gen._resolve_ref` decides that anything

@@ -29,18 +29,20 @@
     },
     {
       "id": "scene_basics_1",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "Employees receive 30 calendar / running days of annual leave per year, including Fridays, Saturdays.",
-      "prompt": "Cinematography: A medium shot of char_narrator, framed from the chest up, with a shallow depth of field blurring the modern office background. The camera holds steady.\nSubject: char_narrator, a professional individual, looking directly at the camera with a reassuring expression.\nAction: Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference. The character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip.\nContext: A contemporary office environment with soft, professional lighting.\nStyle and Ambience: Clear, informative, and engaging mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background.\nAmbient noise: Soft, distant office sounds.\nLanguage: english",
+      "prompt": "Cinematography: A medium shot of char_narrator, framed from the chest up, with a shallow depth of field blurring the modern office background. The camera holds steady.\nSubject: char_narrator, a professional individual, looking directly at the camera with a reassuring expression.\nAction: The character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip.\nContext: A contemporary office environment with soft, professional lighting.\nStyle and Ambience: Clear, informative, and engaging mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background.\nAmbient noise: Soft, distant office sounds.\nLanguage: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_basics_1",
+      "reference_from": "start_frame:sf_basics_1",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Annual Leave Basics",
-      "characters": ["char_realism_informal_male"],
+      "characters": [
+        "char_realism_informal_male"
+      ],
       "audios": [
         {
           "char_id": "char_realism_informal_male",
@@ -58,10 +60,12 @@
       "reference_from": "scene:scene_basics_1",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Annual Leave Basics",
-      "characters": ["char_realism_informal_male"],
+      "characters": [
+        "char_realism_informal_male"
+      ],
       "audios": [
         {
           "char_id": "char_realism_informal_male",
@@ -87,18 +91,20 @@
     },
     {
       "id": "scene_earning_period_1",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "Annual leave earning period runs from 1 Nov to 31 Oct every year consistently.",
-      "prompt": "Cinematography: A medium shot of char_narrator, framed from the chest up, with a shallow depth of field blurring the modern office background. The camera holds steady.\nSubject: char_narrator, a professional individual, looking directly at the camera with a reassuring expression.\nAction: Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference. The character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip.\nContext: A contemporary office environment with soft, professional lighting.\nStyle and Ambience: Clear, informative, and engaging mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background.\nAmbient noise: Soft, distant office sounds.\nLanguage: english",
+      "prompt": "Cinematography: A medium shot of char_narrator, framed from the chest up, with a shallow depth of field blurring the modern office background. The camera holds steady.\nSubject: char_narrator, a professional individual, looking directly at the camera with a reassuring expression.\nAction: The character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip.\nContext: A contemporary office environment with soft, professional lighting.\nStyle and Ambience: Clear, informative, and engaging mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background.\nAmbient noise: Soft, distant office sounds.\nLanguage: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_earning_period_1",
+      "reference_from": "start_frame:sf_earning_period_1",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Leave Earning Period",
-      "characters": ["char_realism_informal_male"],
+      "characters": [
+        "char_realism_informal_male"
+      ],
       "audios": [
         {
           "char_id": "char_realism_informal_male",
@@ -116,10 +122,12 @@
       "reference_from": "scene:scene_earning_period_1",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Leave Earning Period",
-      "characters": ["char_realism_informal_male"],
+      "characters": [
+        "char_realism_informal_male"
+      ],
       "audios": [
         {
           "char_id": "char_realism_informal_male",
@@ -145,18 +153,20 @@
     },
     {
       "id": "scene_probation_access_1",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "You can apply for Annual Leave after completing probation successfully in the company.",
-      "prompt": "Cinematography: A medium shot of char_narrator, framed from the chest up, with a shallow depth of field blurring the modern office background. The camera holds steady.\nSubject: char_narrator, a professional individual, looking directly at the camera with a reassuring expression.\nAction: Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference. The character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip.\nContext: A contemporary office environment with soft, professional lighting.\nStyle and Ambience: Clear, informative, and engaging mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background.\nAmbient noise: Soft, distant office sounds.\nLanguage: english",
+      "prompt": "Cinematography: A medium shot of char_narrator, framed from the chest up, with a shallow depth of field blurring the modern office background. The camera holds steady.\nSubject: char_narrator, a professional individual, looking directly at the camera with a reassuring expression.\nAction: The character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip.\nContext: A contemporary office environment with soft, professional lighting.\nStyle and Ambience: Clear, informative, and engaging mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background.\nAmbient noise: Soft, distant office sounds.\nLanguage: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_probation_access_1",
+      "reference_from": "start_frame:sf_probation_access_1",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 5.0,
       "aspect_ratio": "16:9",
       "topic": "Probationary Leave Access",
-      "characters": ["char_realism_informal_male"],
+      "characters": [
+        "char_realism_informal_male"
+      ],
       "audios": [
         {
           "char_id": "char_realism_informal_male",
@@ -174,10 +184,12 @@
       "reference_from": "scene:scene_probation_access_1",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Probationary Leave Access",
-      "characters": ["char_realism_informal_male"],
+      "characters": [
+        "char_realism_informal_male"
+      ],
       "audios": [
         {
           "char_id": "char_realism_informal_male",
@@ -186,36 +198,46 @@
       ]
     }
   ],
-  "storyboard": [
+  "start_frame": [
     {
-      "id": "sb_basics_1",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator stands professionally, making a welcoming gesture; in the background, a modern, bright office. Panel 2 (top-right, 00:02-00:04): char_narrator gestures towards an unseen calendar, indicating time. Panel 3 (bottom-left, 00:04-00:06): char_narrator holds hands open, palms up, in a clear explanatory gesture. Panel 4 (bottom-right, 00:06-00:08): char_narrator nods slightly, maintaining eye contact, with a reassuring smile. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
-      "reference": ["char_realism_informal_male", "bg_office_modern"]
+      "id": "sf_basics_1",
+      "prompt": "char_realism_informal_male stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
+      "reference": [
+        "char_realism_informal_male",
+        "bg_office_modern"
+      ]
     },
     {
-      "id": "sb_earning_period_1",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator points forward with one hand, as if indicating a timeline; in the background, a modern, bright office. Panel 2 (top-right, 00:02-00:04): char_narrator makes a circular motion with hands, suggesting a recurring period. Panel 3 (bottom-left, 00:04-00:06): char_narrator brings hands together, as if aligning concepts. Panel 4 (bottom-right, 00:06-00:08): char_narrator looks thoughtful, then nods in understanding. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
-      "reference": ["char_realism_informal_male", "bg_office_modern"]
+      "id": "sf_earning_period_1",
+      "prompt": "char_realism_informal_male stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
+      "reference": [
+        "char_realism_informal_male",
+        "bg_office_modern"
+      ]
     },
     {
-      "id": "sb_probation_access_1",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator gestures with an open palm, inviting action; in the background, a modern, bright office. Panel 2 (top-right, 00:02-00:04): char_narrator makes a 'check mark' gesture with fingers, indicating completion. Panel 3 (bottom-left, 00:04-00:06): char_narrator shakes head gently, indicating a restriction. Panel 4 (bottom-right, 00:06-00:08): char_narrator points to an imaginary screen, indicating system access. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
-      "reference": ["char_realism_informal_male", "bg_office_modern"]
+      "id": "sf_probation_access_1",
+      "prompt": "char_realism_informal_male stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
+      "reference": [
+        "char_realism_informal_male",
+        "bg_office_modern"
+      ]
     },
     {
-      "id": "sb_emergency_probation_1",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator shows a concerned expression, hands slightly raised; in the background, a modern, bright office. Panel 2 (top-right, 00:02-00:04): char_narrator gestures as if encouraging discussion. Panel 3 (bottom-left, 00:04-00:06): char_narrator points to an imaginary manager, indicating direct communication. Panel 4 (bottom-right, 00:06-00:08): char_narrator makes a balancing gesture with hands, indicating flexibility within rules. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
-      "reference": ["char_realism_informal_male", "bg_office_modern"]
+      "id": "sf_emergency_probation_1",
+      "prompt": "char_realism_informal_male stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
+      "reference": [
+        "char_realism_informal_male",
+        "bg_office_modern"
+      ]
     },
     {
-      "id": "sb_carry_forward_1",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator makes a forward-moving gesture with one hand; in the background, a modern, bright office. Panel 2 (top-right, 00:02-00:04): char_narrator holds up three fingers, indicating a quantity. Panel 3 (bottom-left, 00:04-00:06): char_narrator makes a gesture of seeking approval. Panel 4 (bottom-right, 00:06-00:08): char_narrator gestures broadly, indicating a wider scope of permission. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
-      "reference": ["char_realism_informal_male", "bg_office_modern"]
+      "id": "sf_carry_forward_1",
+      "prompt": "char_realism_informal_male stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
+      "reference": [
+        "char_realism_informal_male",
+        "bg_office_modern"
+      ]
     }
   ],
   "keyframe": []

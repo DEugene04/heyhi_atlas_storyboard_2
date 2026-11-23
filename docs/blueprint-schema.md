@@ -20,7 +20,7 @@ can satisfy the models here and still be rejected there.
   "music_style": "Warm acoustic guitar and light piano, calm and reassuring — corporate training explainer mood.",
   "backgrounds": [ { "id": "...", "prompt": "..." } ],
   "scenes":      [ { ... } ],
-  "storyboard":  [ { "id": "...", "model": "...", "prompt": "...", "reference": [...] } ]
+  "start_frame": [ { "id": "...", "prompt": "...", "reference": ["<char_id>", "<bg_id>"] } ]
 }
 ```
 
@@ -33,7 +33,7 @@ can satisfy the models here and still be rejected there.
 | `music_style`     | str       | ✅  | Passed verbatim to Lyria (wrapped by `build_bed_prompt`). Genre + mood + instrumentation, one line.                                                   |
 | `backgrounds`     | list      | ✅  | One per distinct location. Each becomes `backgrounds/<id>.png`.                                                                                       |
 | `scenes`          | list      | ✅  | **The timeline.** List order is playback order.                                                                                                       |
-| `storyboard`      | list      | ✅  | 2×2 timecoded reference grids. Each becomes `storyboard/<id>.png`.                                                                                    |
+| `start_frame`     | list      | ✅  | One per group: the group's character placed into a background. Each becomes `start_frame/<id>.png`.                                                    |
 
 ---
 
@@ -41,25 +41,26 @@ can satisfy the models here and still be rejected there.
 
 | Field    | Type | Notes                                                                                                                |
 | -------- | ---- | -------------------------------------------------------------------------------------------------------------------- |
-| `id`     | str  | Becomes the PNG filename. Referenced by `scene.reference_from` as `background:<id>` and by `storyboard[].reference`. |
+| `id`     | str  | Becomes the PNG filename. Referenced by `scene.reference_from` as `background:<id>` and by `start_frame[].reference`. |
 | `prompt` | str  | Empty environment plate, **no characters in frame**, wide establishing shot. Style-neutral — L4 prepends `bp.style`. |
 
 Duplicate ids are rejected.
 
-## `storyboard[]`
+## `start_frame[]`
 
-| Field       | Type      | Notes                                                                                                                                                           |
-| ----------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`        | str       | Becomes the PNG filename. Referenced as `storyboard:<id>`.                                                                                                      |
-| `model`     | str       | Defaults `"gemini-2.5-flash-image"`. **Not read by any code (For documentation purposes)** — `image_gen.GeminiImageClient` hard-codes its model. Informational. |
-| `prompt`    | str       | One 8-second scene as four 2s panels with timecodes `[00:00-00:02]` … `[00:06-00:08]`. Should describe what characters **do**, not how they look.               |
-| `reference` | list[str] | Mix of `char_id`s and `bg_id`s. Resolved to `character_library/<id>.png` and `backgrounds/<id>.png` and attached as reference images.                           |
+One per **group** — a group is every scene between two B-Rolls (a B-Roll ends one
+group and starts the next). Each group has exactly one character.
 
-Every entry in `reference` must be either a known `bg_id` or a `char_id` that
-appears in some scene. Duplicate ids are rejected.
+| Field       | Type      | Notes                                                                                                                                  |
+| ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`        | str       | Becomes the PNG filename in `start_frame/`. Referenced as `start_frame:<id>`.                                                            |
+| `prompt`    | str       | A single frame: the group's character centered, facing the camera, set into the background. Not a grid.                                |
+| `reference` | list[str] | **Exactly two ids**: the group's `char_id`, then one `bg_id`. Resolved to `character_library/<id>.png` and `backgrounds/<id>.png`.      |
 
-One storyboard = one 8-second Veo clip. Used for the **first** speaking scene of
-every topic.
+Duplicate ids are rejected, and so is a start frame that no scene uses. The scene
+that references it must have the same character the frame shows. It is the first
+frame of the group's **first** speaking scene; later scenes of the group chain from
+the previous clip's last frame.
 
 ---
 
@@ -70,12 +71,12 @@ The timeline. Concatenated in list order with no cuts.
 ```json
 {
   "id": "scene_basics_1",
-  "task": "reference-to-video",
-  "model": "Veo 3.1 Fast",
+  "task": "image-to-video",
+  "model": "Veo 3.1 Lite",
   "text": "Employees receive 30 calendar days of annual leave per year.",
   "prompt": "Cinematography: ... Subject: ... Action: ... Context: ... Style and Ambience: ... Ambient noise: ... Language: english",
   "safety": "Allow (Adult only)",
-  "reference_from": "storyboard:sb_basics_1",
+  "reference_from": "start_frame:sf_basics_1",
   "type": "video-with-audio",
   "broll_role": null,
   "length": null,
@@ -89,15 +90,15 @@ The timeline. Concatenated in list order with no cuts.
 | Field            | Type      | Notes                                                                                                                    |
 | ---------------- | --------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `id`             | str       | Used as a **filename** in `veo_raw/`, `scenes/` and `tts/`. Must be filesystem-safe. Duplicates rejected.                |
-| `task`           | enum      | `image-to-video` \| `reference-to-video`. Not independent — determined by `reference_from`.                              |
-| `model`          | enum      | `Veo 3.1 Fast` \| `Veo 3.1 Lite`. Also determined by `reference_from`.                                                   |
+| `task`           | enum      | Always `image-to-video`.                                                                                                 |
+| `model`          | enum      | Always `Veo 3.1 Lite`.                                                                                                   |
 | `text`           | str       | Spoken words. `""` for B-Roll (enforced). Non-empty for speaking scenes (enforced). Word-capped (see [pacing](#pacing)). |
 | `prompt`         | str       | Structured Veo prompt. Must contain six labels (see below).                                                              |
 | `safety`         | str       | Maps to Veo `person_generation` via `GeminiVeoClient._PERSON_GENERATION`. Ignored entirely on the kie.ai path.           |
 | `reference_from` | str       | The routing key. See [below](#reference_from).                                                                           |
 | `type`           | enum      | `video-with-audio` \| `B-Roll`.                                                                                          |
 | `broll_role`     | enum?     | `opening` \| `closing`. Required for B-Roll, must be `null` for speaking scenes.                                         |
-| `length`         | float?    | Seconds. Required > 0 for B-Roll, must be `null` for speaking scenes. Capped at `max_scene_seconds`.                     |
+| `length`         | float?    | Seconds. Required > 0 for B-Roll, capped at `max_scene_seconds`. Speaking scenes: the director leaves it `null` and `director.fill_speaking_lengths` sets it to `max(4, floor(words / words_per_second))` from that scene's own text.                     |
 | `aspect_ratio`   | enum      | `16:9` in practice. The type still admits `9:16`, but the config layer pins it — see below.                              |
 | `topic`          | str?      | Required for speaking scenes. Drives B-Roll boundary validation.                                                         |
 | `characters`     | list[str] | Placeholder `char_id`s (L2) → library ids (after L3). Must be `[]` for B-Roll. Non-empty for speaking scenes.            |
@@ -113,7 +114,7 @@ suggest otherwise.
 
 The lock lives at the config layer *deliberately*, not out of neglect. Portrait
 does not work end to end: `main._image_client()` never reads `config.aspect_ratio`,
-so a `9:16` run would generate **landscape** backgrounds and storyboards and then
+so a `9:16` run would generate **landscape** backgrounds and start frames and then
 ask Veo for portrait video; and all five bundled transition overlays are
 1920×1080, which `apply_transitions` would stretch rather than letterbox. Keeping
 the schema bilingual means unlocking is one line plus passing config through in
@@ -134,11 +135,11 @@ generation time — the last gate before a billable call.
 
 | Value                                                 | Task               | Model            | Input attached                                     |
 | ----------------------------------------------------- | ------------------ | ---------------- | -------------------------------------------------- |
-| `storyboard:<sb_id>`                                  | reference-to-video | Veo 3.1 **Fast** | `storyboard/<id>.png` as a reference image         |
+| `start_frame:<sf_id>`                                 | image-to-video     | Veo 3.1 **Lite** | `start_frame/<id>.png` as the seed frame           |
 | `background:<bg_id>`                                  | image-to-video     | Veo 3.1 **Lite** | `backgrounds/<id>.png` as the seed frame           |
 | `scene:<prev_id>`                                     | image-to-video     | Veo 3.1 **Lite** | **last frame** of `scenes/<prev_id>.mp4`           |
 | `<prev_id>` (bare)                                    | image-to-video     | Veo 3.1 **Lite** | same as `scene:` — tolerated, reported differently |
-| bare `storyboard` / `background` / `scene` with no id | —                  | —                | **rejected as ambiguous**                          |
+| bare `start_frame` / `background` / `scene` with no id | —                  | —                | **rejected as ambiguous**                          |
 
 The referenced id must resolve, and a `scene:` reference must point at an
 **earlier** scene — validation is a single forward pass, so a forward reference
@@ -171,20 +172,23 @@ Language: <config.language>
   described positively.
 - **Speaking scenes** must mention `mouth` or `lip`, and should contain the verbatim
   lip-sync clause.
-- **Storyboard-referenced scenes** must contain `storyboard grid` and `panel 1`,
-  instructing Veo not to render the grid itself.
+- **Simple performance** (AI RULE #9, prompt-enforced) — the character is centered,
+  speaks to the camera, and uses only small body language; no props or movement.
 - **Closing B-Roll** must contain `consistent with previous frame`.
 
 ### Timeline rules
 
 1. Exactly one `opening` B-Roll, first, referencing `background:<bg_id>`.
-2. Speaking scenes: the **first** of a topic references a storyboard; **continuations**
+2. Speaking scenes: the **first** of a topic (group) references a `start_frame`; **continuations**
    (same `topic` as the previous scene) reference `scene:<prev_id>`.
 3. Every topic ends with a `closing` B-Roll, **including the last**. It references
    the immediately-previous scene, which must be a speaking scene.
 4. A topic change with no closing B-Roll between is invalid. A closing B-Roll
    _between two scenes of the same topic_ is also invalid.
-5. B-Roll carries no characters at all, ever — including closing B-Rolls, where
+5. **One character per group.** Every speaking scene lists exactly one `char_id`,
+   and it is the same one for every scene between two B-Rolls. It may change after
+   a B-Roll. There is no dialogue between characters.
+6. B-Roll carries no characters at all, ever — including closing B-Rolls, where
    anyone already in the inherited frame stays visible but motionless.
 
 There is no `topic-transition` role. The renderer composites a transition overlay
@@ -260,7 +264,7 @@ direction is authored.
 ### `aspect_ratio`
 
 Interpolated into `DIRECTOR_RULES` so the director writes it into background and
-storyboard prompt templates, and copied onto each scene. Passed to Veo per scene and
+start-frame prompt templates, and copied onto each scene. Passed to Veo per scene and
 to `GeminiImageClient` per image.
 
 ### `language`
@@ -307,8 +311,8 @@ blueprint.json               director output, placeholder char_ids
 placeholders the new one doesn't have.
 
 **What gets rewritten:** `scenes[].characters`, `scenes[].audios[].char_id`,
-`storyboard[].reference`.
-**What does not:** `scenes[].prompt`, `storyboard[].prompt`. See
+`start_frame[].reference`.
+**What does not:** `scenes[].prompt`, `start_frame[].prompt`. See
 [open-questions.md](open-questions.md#1-decided--placeholder-char_ids-leak-into-veo-prompts).
 
 ---

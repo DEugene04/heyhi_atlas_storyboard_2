@@ -68,7 +68,7 @@ BP = {
     "style": "cartoon style",
     "backgrounds": [{"id": "bg1", "prompt": "an office"},
                     {"id": "bg2", "prompt": "a corridor"}],
-    "storyboard": [{"id": "sb1", "prompt": "2x2 grid", "reference": ["bg1"]}],
+    "start_frame": [{"id": "sf1", "prompt": "a frame", "reference": ["bg1"]}],
 }
 
 
@@ -81,7 +81,7 @@ def test_assets_resume_skips_pngs_that_exist(tmp_path):
 
     res = gen.generate_all(BP)
 
-    assert len(client.calls) == 2, "only bg2 and sb1 should have been generated"
+    assert len(client.calls) == 2, "only bg2 and sf1 should have been generated"
     assert [p.name for p in gen.reused] == ["bg1.png"]
     assert (tmp_path / "backgrounds" / "bg1.png").read_bytes() == b"already here"
     assert len(res["backgrounds"]) == 2, "the skipped file is still reported"
@@ -100,20 +100,20 @@ def test_assets_without_resume_regenerates_everything(tmp_path):
     assert (tmp_path / "backgrounds" / "bg1.png").read_bytes() != b"already here"
 
 
-def test_resume_skips_a_storyboard_before_resolving_its_references(tmp_path):
-    """The existence check runs BEFORE _resolve_ref, so a storyboard that is
+def test_resume_skips_a_start_frame_before_resolving_its_references(tmp_path):
+    """The existence check runs BEFORE _resolve_ref, so a start frame that is
     already generated does not fail on a reference that is no longer on disk.
     Without the ordering this raises AssetError."""
     client = CountingImageClient()
     gen = AssetGenerator(tmp_path, tmp_path / "chars", client, resume=True)
 
-    for name in ("backgrounds/bg1.png", "backgrounds/bg2.png", "storyboard/sb1.png"):
+    for name in ("backgrounds/bg1.png", "backgrounds/bg2.png", "start_frame/sf1.png"):
         p = tmp_path / name
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(b"x")
     (tmp_path / "backgrounds" / "bg1.png").unlink()   # the reference is gone
 
-    gen.generate_all(BP)      # regenerates bg1 only; sb1 is skipped, not resolved
+    gen.generate_all(BP)      # regenerates bg1 only; sf1 is skipped, not resolved
     assert len(client.calls) == 1
 
 
@@ -285,29 +285,25 @@ def test_music_resume_keeps_the_existing_track(client):
     assert (d / "music_bg" / "track.mp3").read_bytes() == b"ID3 existing"
 
 
-def test_library_background_video_and_seed_reach_reference_scenes_only(tmp_path):
-    """H3 extras ride on reference-to-video scenes; image-to-video keeps its first frame."""
-    (tmp_path / "storyboard").mkdir()
-    (tmp_path / "storyboard" / "sb1.png").write_bytes(b"sb")
-    bg, vid = tmp_path / "bg.png", tmp_path / "ref.mp4"
-    bg.write_bytes(b"bg"); vid.write_bytes(b"v")
-    gen = SceneGenerator(tmp_path, CountingVeo(), background=bg,
-                         reference_video=vid, seed=7)
-    scene = {"id": "s1", "task": "reference-to-video", "model": "Veo 3.1 Fast",
-             "type": "video-with-audio", "text": "hi", "prompt": "p",
-             "reference_from": "storyboard:sb1", "aspect_ratio": "16:9"}
+def test_a_start_frame_seeds_an_image_to_video_clip(tmp_path):
+    """Every scene is image-to-video: the start frame is the first frame, and there
+    are no reference images."""
+    (tmp_path / "start_frame").mkdir()
+    (tmp_path / "start_frame" / "sf1.png").write_bytes(b"sf")
+    gen = SceneGenerator(tmp_path, CountingVeo(), seed=7)
+    scene = {"id": "s1", "task": "image-to-video", "model": "Veo 3.1 Lite",
+             "type": "video-with-audio", "text": "hi", "prompt": "p", "length": 4,
+             "reference_from": "start_frame:sf1", "aspect_ratio": "16:9"}
     spec = gen.build_spec(scene)
-    assert spec.references == [b"sb", b"bg"]
-    assert spec.reference_video == vid and spec.seed == 7
-    assert "<Picture 2>" in spec.prompt
-    assert spec.prompt.index("<Picture 2>") < spec.prompt.index("Audio sync")
+    assert spec.image == b"sf" and spec.references == []
+    assert spec.task == "image-to-video" and spec.seed == 7 and spec.duration_s == 4.0
 
 
 def test_turbo_flag_reaches_the_spec():
-    scene = {"id": "s1", "task": "reference-to-video", "model": "Veo 3.1 Fast", "type": "B-Roll",
-             "prompt": "p", "length": 4, "reference_from": "storyboard:k1", "aspect_ratio": "16:9"}
+    scene = {"id": "s1", "task": "image-to-video", "model": "Veo 3.1 Lite", "type": "B-Roll",
+             "prompt": "p", "length": 4, "reference_from": "background:k1", "aspect_ratio": "16:9"}
     import tempfile
     with tempfile.TemporaryDirectory() as d:
-        (Path(d) / "storyboard").mkdir(); (Path(d) / "storyboard" / "k1.png").write_bytes(b"k")
+        (Path(d) / "backgrounds").mkdir(); (Path(d) / "backgrounds" / "k1.png").write_bytes(b"k")
         assert SceneGenerator(d, CountingVeo(), turbo=True).build_spec(scene).turbo is True
         assert SceneGenerator(d, CountingVeo()).build_spec(scene).turbo is None

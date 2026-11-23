@@ -52,15 +52,43 @@ def test_duplicate_scene_ids_rejected(bp, cfg):
     assert has(validate_blueprint(bp, cfg), "duplicate scene id")
 
 
-def test_duplicate_storyboard_ids_rejected(bp, cfg):
-    dup = bp.storyboard[0].model_copy()
-    bp.storyboard.append(dup)
-    assert has(validate_blueprint(bp, cfg), "duplicate storyboard id")
+def test_duplicate_start_frame_ids_rejected(bp, cfg):
+    dup = bp.start_frame[0].model_copy()
+    bp.start_frame.append(dup)
+    assert has(validate_blueprint(bp, cfg), "duplicate start_frame id")
 
 
-def test_storyboard_reference_must_be_known(bp, cfg):
-    bp.storyboard[0].reference = ["char_nobody"]
-    assert has(validate_blueprint(bp, cfg), "reference 'char_nobody'")
+def test_start_frame_reference_must_be_known(bp, cfg):
+    bp.start_frame[0].reference = ["char_nobody", "bg_office_modern"]
+    assert has(validate_blueprint(bp, cfg), "reference ['char_nobody']")
+
+
+def test_start_frame_needs_exactly_one_character_and_one_background(bp, cfg):
+    bp.start_frame[0].reference = ["char_narrator"]
+    assert has(validate_blueprint(bp, cfg), "exactly one char_id and one background id")
+
+
+def test_unused_start_frame_rejected(bp, cfg):
+    """One start_frame per group — an extra one is an image paid for and never used."""
+    bp.start_frame.append(bp.start_frame[0].model_copy(update={"id": "sf_extra"}))
+    assert has(validate_blueprint(bp, cfg), "'sf_extra' is never used")
+
+
+def test_start_frame_may_start_only_one_scene(bp, cfg):
+    sc = find(bp, "scene_earning_period_1")
+    sc.reference_from = "start_frame:sf_basics_1"
+    assert has(validate_blueprint(bp, cfg), "already starts another scene")
+
+
+def test_start_frame_must_show_the_scenes_character(bp, cfg):
+    """The frame the clip starts from and the voice speaking over it must agree."""
+    for sc in bp.scenes:                      # char_other is a real second character
+        if sc.topic == "Leave Earning Period" and sc.type == "video-with-audio":
+            sc.characters = ["char_other"]
+            sc.audios[0].char_id = "char_other"
+    bp.start_frame[1].reference = ["char_other", "bg_office_modern"]
+    bp.start_frame[0].reference = ["char_other", "bg_office_modern"]   # but scene_basics_1 is the narrator
+    assert has(validate_blueprint(bp, cfg), "shows 'char_other'")
 
 
 # ---------------------------------------------------------------- reference_from
@@ -81,10 +109,10 @@ def test_ambiguous_reference_from_is_reported_not_raised(bp, cfg):
     assert has(problems, "ambiguous")
 
 
-def test_unknown_storyboard_reference(bp, cfg):
+def test_unknown_start_frame_reference(bp, cfg):
     sc = find(bp, "scene_basics_1")
-    sc.reference_from = "storyboard:sb_does_not_exist"
-    assert has(validate_blueprint(bp, cfg), "unknown storyboard")
+    sc.reference_from = "start_frame:sf_does_not_exist"
+    assert has(validate_blueprint(bp, cfg), "unknown start_frame")
 
 
 def test_unknown_background_reference(bp, cfg):
@@ -102,14 +130,14 @@ def test_scene_reference_must_point_backwards(bp, cfg):
 
 
 def test_task_must_match_reference_prefix(bp, cfg):
-    sc = find(bp, "scene_basics_1")            # storyboard: -> reference-to-video
-    sc.task = "image-to-video"
+    sc = find(bp, "scene_basics_1")            # every scene is image-to-video
+    sc.task = "reference-to-video"
     assert has(validate_blueprint(bp, cfg), "does not match reference_from")
 
 
 def test_model_must_match_reference_prefix(bp, cfg):
-    sc = find(bp, "scene_basics_1")            # storyboard: -> Veo 3.1 Fast
-    sc.model = "Veo 3.1 Lite"
+    sc = find(bp, "scene_basics_1")            # every scene is Veo 3.1 Lite
+    sc.model = "Veo 3.1 Fast"
     assert has(validate_blueprint(bp, cfg), "model=", "does not match")
 
 
@@ -152,12 +180,6 @@ def test_word_budget_follows_config(bp, cfg):
     assert not has(validate_blueprint(bp, cfg), "max 20")
 
 
-def test_speaking_scene_must_not_set_length(bp, cfg):
-    sc = first(bp, type="video-with-audio")
-    sc.length = 6.0
-    assert has(validate_blueprint(bp, cfg), "must leave 'length' null")
-
-
 def test_speaking_scene_must_not_set_broll_role(bp, cfg):
     sc = first(bp, type="video-with-audio")
     sc.broll_role = "closing"
@@ -168,7 +190,33 @@ def test_speaking_scene_needs_a_speaker(bp, cfg):
     sc = first(bp, type="video-with-audio")
     sc.characters = []
     sc.audios = []
-    assert has(validate_blueprint(bp, cfg), "at least one")
+    assert has(validate_blueprint(bp, cfg), "exactly one char_id")
+
+
+def test_speaking_scene_may_not_have_two_characters(bp, cfg):
+    """No dialogue: the video model cannot keep two characters, or voices, apart."""
+    sc = first(bp, type="video-with-audio")
+    sc.characters = ["char_narrator", "char_other"]
+    assert has(validate_blueprint(bp, cfg), "exactly one char_id")
+
+
+def test_character_may_not_change_inside_a_group(bp, cfg):
+    """A group is the scenes between two B-Rolls; its character must not change."""
+    sc = find(bp, "scene_basics_2")
+    sc.characters = ["char_other"]
+    sc.audios[0].char_id = "char_other"
+    assert has(validate_blueprint(bp, cfg), "inside one group")
+
+
+def test_character_may_change_after_a_broll(bp, cfg):
+    """The B-Roll ends one group and starts the next, so a new character is fine."""
+    for sc in bp.scenes:
+        if sc.topic == "Leave Earning Period" and sc.type == "video-with-audio":
+            sc.characters = ["char_other"]
+            sc.audios[0].char_id = "char_other"
+    bp.start_frame[1].reference = ["char_other", "bg_office_modern"]
+    bp.character_count = 2
+    assert validate_blueprint(bp, cfg) == []
 
 
 def test_speaking_scene_prompt_must_describe_mouth_motion(bp, cfg):
@@ -208,7 +256,7 @@ def test_broll_requires_role(bp, cfg):
 
 def test_opening_broll_must_reference_a_background(bp, cfg):
     sc = first(bp, broll_role="opening")
-    sc.reference_from = "storyboard:sb_basics_1"
+    sc.reference_from = "start_frame:sf_basics_1"
     assert has(validate_blueprint(bp, cfg), "must be 'background:...'")
 
 
@@ -251,13 +299,6 @@ def test_forbidden_negations_rejected(bp, cfg):
     assert has(problems, "forbidden pure-negation")
 
 
-def test_storyboard_scene_must_instruct_veo_to_skip_the_grid(bp, cfg):
-    """Without this, Veo animates the 2x2 grid itself as the first frames."""
-    sc = find(bp, "scene_basics_1")
-    sc.prompt = sc.prompt.replace("storyboard grid", "reference")
-    assert has(validate_blueprint(bp, cfg), "NOT to display the storyboard grid")
-
-
 # ---------------------------------------------------------------- topic boundaries
 def test_topic_change_without_closing_broll_rejected(bp, cfg):
     """B-Roll marks topic ENDS. Removing the boundary marker must be caught, or
@@ -280,20 +321,16 @@ def test_closing_broll_inside_a_topic_rejected(bp, cfg):
 
 def test_topic_continuation_must_chain_not_restart(bp, cfg):
     """A second scene in the same topic must seed from the previous clip, not
-    open a fresh storyboard — otherwise the character visibly resets."""
+    open a fresh start_frame — otherwise the character visibly resets."""
     sc = find(bp, "scene_basics_2")
-    sc.reference_from = "storyboard:sb_basics_1"
-    sc.task = "reference-to-video"
-    sc.model = "Veo 3.1 Fast"
+    sc.reference_from = "start_frame:sf_basics_1"
     assert has(validate_blueprint(bp, cfg), "must chain from previous scene")
 
 
-def test_topic_start_must_use_a_storyboard(bp, cfg):
+def test_topic_start_must_use_a_start_frame(bp, cfg):
     sc = find(bp, "scene_earning_period_1")
     sc.reference_from = "scene:broll_basics_closing"
-    sc.task = "image-to-video"
-    sc.model = "Veo 3.1 Lite"
-    assert has(validate_blueprint(bp, cfg), "must be", "storyboard:<sb_id>")
+    assert has(validate_blueprint(bp, cfg), "must be", "start_frame:<sf_id>")
 
 
 def test_speaking_scene_requires_a_topic(bp, cfg):

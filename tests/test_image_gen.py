@@ -79,12 +79,12 @@ def test_gpt_image_2_rates():
 def test_asset_generation_bills_every_image_and_nothing_is_unpriced(tmp_path):
     import json
     bp = {"style": "flat", "backgrounds": [{"id": "bg1", "prompt": "plate"}],
-          "storyboard": [{"id": "sb1", "prompt": "grid", "reference": ["bg1"]}]}
+          "start_frame": [{"id": "sf1", "prompt": "frame", "reference": ["bg1"]}]}
     (tmp_path / "blueprint.json").write_text(json.dumps(bp))
     AssetGenerator(tmp_path, tmp_path, OpenAIImageClient(FakeOpenAI()),
                    retry_backoff_s=0).generate_all()
     assert (tmp_path / "backgrounds/bg1.png").is_file()
-    assert (tmp_path / "storyboard/sb1.png").is_file()
+    assert (tmp_path / "start_frame/sf1.png").is_file()
     recs = [r for r in load(tmp_path) if r["layer"] == "L4"]
     assert {r["provider"] for r in recs} == {"openai"}
     s = summarize(tmp_path)
@@ -99,7 +99,7 @@ def test_every_generated_image_gets_the_no_text_rule(tmp_path):
     import json
     from app.pipeline.image_gen import NO_TEXT_CLAUSE
     bp = {"style": "flat", "backgrounds": [{"id": "bg1", "prompt": "plate"}],
-          "storyboard": [{"id": "sb1", "prompt": "grid", "reference": ["bg1"]}]}
+          "start_frame": [{"id": "sf1", "prompt": "frame", "reference": ["bg1"]}]}
     (tmp_path / "blueprint.json").write_text(json.dumps(bp))
     fake = FakeOpenAI()
     AssetGenerator(tmp_path, tmp_path, OpenAIImageClient(fake),

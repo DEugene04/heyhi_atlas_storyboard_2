@@ -9,7 +9,7 @@ Endpoints
   GET  /pipeline/characters L3  list the character library
   GET  /pipeline/audios     L3  list the audio/voice library
   POST /pipeline/select     L3  persist selection + resolve blueprint placeholders
-  POST /pipeline/assets     L4  generate backgrounds/storyboards                  [network+credits]
+  POST /pipeline/assets     L4  generate backgrounds/start frames                 [network+credits]
   POST /pipeline/scenes     L5+L6  generate Veo scenes + TTS interleave           [network+credits]
   POST /pipeline/music      L7  generate the background bed (Lyria)          [network+credits]
   POST /pipeline/render     L8  merge + title + transitions + subs + music   [local ffmpeg]
@@ -37,7 +37,7 @@ the pipeline's ordering constraints, expressed as file existence:
     blueprint.json              /pipeline/direct       required by select, music
     blueprint.placeholder.json  /pipeline/select       pristine pre-patch snapshot
     selections.json             /pipeline/select       required by assets, scenes
-    backgrounds/, storyboard/   /pipeline/assets       required by scenes
+    backgrounds/, start_frame/  /pipeline/assets       required by scenes
     veo_raw/<id>.mp4            /pipeline/scenes       pristine clips; enable tts_only
     scenes/<id>.mp4             /pipeline/scenes       voiced + trimmed; required by render
     tts/                        L6                     voice wavs + timings sidecars
@@ -104,9 +104,7 @@ from app.schemas import (
 from app.libraries import CharacterEntry, load_audio_index, load_character_index
 
 from app.pipeline.patch_blueprint import patch_run, PatchError
-from app.pdf_review import (
-    IMAGE_LIBRARY_ROOT, VIDEO_LIBRARY_ROOT, _safe_child, router as pdf_review_router,
-)
+from app.pdf_review import router as pdf_review_router
 from app.studio_ui import landing_router, router as studio_router
 
 # storage root is env-overridable so tests/prod never share a tree
@@ -240,7 +238,7 @@ def _run_status(d: Path) -> dict:
         **flags,
         "title": (bp or {}).get("title"),
         "backgrounds": _count(d / "backgrounds", "*.png"),
-        "storyboards": _count(d / "storyboard", "*.png"),
+        "start_frames": _count(d / "start_frame", "*.png"),
         "veo_raw": _count(d / "veo_raw", "*.mp4"),
         "scenes_ready": ready,
         "scenes_total": len(scenes),
@@ -300,7 +298,7 @@ def _contained_file(root: Path, relative: str) -> Path:
 
 @app.get("/pipeline/files/{run_id}/{relative_path:path}")
 def run_file(run_id: str, relative_path: str) -> FileResponse:
-    """A generated artifact of a run: backgrounds, storyboards, scene clips,
+    """A generated artifact of a run: backgrounds, start frames, scene clips,
     music, subtitles, final.mp4."""
     return FileResponse(_contained_file(_run_dir(run_id), relative_path))
 
@@ -452,15 +450,21 @@ def run_director(body: DirectIn) -> DirectOut:
         for stale in ("blueprint.placeholder.json", "selections.json"):
             (d / stale).unlink(missing_ok=True)
 
-    # Two post-processing steps between validation and disk, so what lands in
-    # blueprint.json is NOT byte-identical to what Gemini returned:
+    # Three post-processing steps between validation and disk, so what lands in
+    # blueprint.json is NOT byte-identical to what the director returned:
+    #   fill_speaking_lengths — sets each speaking scene's `length` from its own
+    #     word count (words / pace, rounded down, 4s floor). The director leaves it
+    #     null; L5 sizes the clip from it.
     #   enforce_opening_length — forces the opening B-Roll to 4s on an 'opening'
     #     run so it can carry the title card (no-op on 'summary'). Has to happen
     #     before L5 or Veo renders the plate too short.
     #   derive_style_type — keyword-maps the free-text style into the StyleType the
     #     renderer's title treatment keys on. Stored once so nothing re-derives it.
-    from app.pipeline.director import enforce_opening_length, derive_style_type
+    from app.pipeline.director import (
+        derive_style_type, enforce_opening_length, fill_speaking_lengths,
+    )
     bp_dict = enforce_opening_length(bp.model_dump(mode="json"), d)
+    bp_dict = fill_speaking_lengths(bp_dict, config.words_per_second)
     bp_dict["style_type"] = derive_style_type(bp_dict.get("style", ""))
     atomic_write_text(bp_path, json.dumps(bp_dict, indent=2, ensure_ascii=False))
     return DirectOut(
@@ -625,7 +629,7 @@ def run_assets(body: AssetsIn) -> AssetsOut:
     return AssetsOut(
         run_id=body.run_id, assets_dir=str(d),
         backgrounds=len(res["backgrounds"]),
-        storyboard=len(res["storyboard"]),
+        start_frame=len(res["start_frame"]),
         reused=len(gen.reused),
     )
 
@@ -642,16 +646,6 @@ def _scene_clients(tts_provider: str, video_provider: str = "minimax_h3",
     return VIDEO_PROVIDERS[video_provider](gemini), PROVIDERS[tts_provider](gemini, diarizer=dia)
 
 
-def _library_file(root: Path, name: str) -> Path | None:
-    """Resolve an optional file name inside a shared library, or None when unset."""
-    if not name:
-        return None
-    target = _safe_child(root, name)
-    if not target.is_file():
-        raise HTTPException(404, f"'{name}' not found in {root.name}")
-    return target
-
-
 @app.post("/pipeline/scenes", response_model=ScenesOut)
 def run_scenes(body: ScenesIn) -> ScenesOut:
     d = _run_dir(body.run_id)
@@ -663,7 +657,7 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
         raise HTTPException(409, "run /pipeline/select first (resolved blueprint required)")
     bg_dir = d / "backgrounds"
     if not (bg_dir.is_dir() and any(bg_dir.glob("*.png"))):
-        raise HTTPException(409, "run /pipeline/assets first (backgrounds/storyboards required)")
+        raise HTTPException(409, "run /pipeline/assets first (backgrounds/start frames required)")
     scenes_dir = d / "scenes"
 
     full_bp = json.loads((d / "blueprint.json").read_text(encoding="utf-8"))
@@ -723,14 +717,11 @@ def run_scenes(body: ScenesIn) -> ScenesOut:
     if problems:
         raise HTTPException(422, {"errors": problems})
 
-    if body.video_provider != "minimax_h3" and (body.background or body.reference_video or body.turbo):
-        raise HTTPException(422, "background / reference_video / turbo are only supported by video_provider='minimax_h3'")
-    bg = _library_file(IMAGE_LIBRARY_ROOT, body.background)
-    ref_video = _library_file(VIDEO_LIBRARY_ROOT, body.reference_video)
+    if body.video_provider != "minimax_h3" and body.turbo:
+        raise HTTPException(422, "turbo is only supported by video_provider='minimax_h3'")
 
     gen = SceneGenerator(d, veo, backoff_s=retry_backoff_from_env(),
-                         background=bg, reference_video=ref_video, seed=body.seed,
-                         turbo=body.turbo)
+                         seed=body.seed, turbo=body.turbo)
     try:
         if body.tts_only:
             paths = gen.rerender_tts(bp, voice_for=voice_for, audio=audio)

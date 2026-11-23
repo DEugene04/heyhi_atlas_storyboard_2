@@ -27,6 +27,7 @@ This module also owns:
 from __future__ import annotations
 
 import json
+import math
 import re
 from copy import deepcopy
 from pathlib import Path
@@ -85,19 +86,15 @@ AI RULES (HIGHEST PRIORITY — Veo has empirically failed these; be strict):
     - camera position, angle, framing, lens, and composition
     - any existing visual effects
     The prompt MUST describe ONLY the visual changes ("the delta") relative to the referenced frame, such as:
-    - new character movement or pose
+    - a new small gesture, nod, or shift of posture
     - new facial expression
-    - new gesture
     - dialogue or lip-sync changes
-    - interaction with an object
-    - newly introduced object or character
-    - intentional environmental changes
     Do NOT rewrite the entire scene as if it were a standalone image prompt. Treat the continuation prompt as an edit to the previous frame, not a replacement.
     For continuation scenes, the "Style & Ambience" field MUST NOT repeat inherited visual descriptions such as lighting, blur, camera framing, or atmosphere. If there are no intentional visual changes, write exactly: "Consistent with previous frame, wordless illustration; all surfaces smooth and blank; no signage, no writing, no text, no labels, or numerical characters visible on any object, wall, or background." The wordless clause of AI RULE #3 is the ONE thing that is never dropped, even on a continuation scene.
 
    7. STYLE IS APPENDED DOWNSTREAM, NOT AUTHORED HERE. The asset-generation
      layer prepends the top-level "style" fragment to every image prompt
-     (backgrounds, storyboard) at render time. Do NOT write art-
+     (backgrounds, start_frame) at render time. Do NOT write art-
      style / rendering descriptors — e.g. "flat 2D cartoon", "cel-shaded",
      "photorealistic", "cinematic", "watercolor", "3D render", "anime" —
      into any image prompt or into a scene's "Style and Ambience" field.
@@ -105,6 +102,23 @@ AI RULES (HIGHEST PRIORITY — Veo has empirically failed these; be strict):
      medium word ("an illustration of...") is acceptable so long as it
      names no specific art style. The one authored art direction lives
      ONLY in the top-level "style" field.
+
+  8. ONE CHARACTER PER GROUP. A GROUP is every scene between two B-Rolls:
+     it starts right after a B-Roll and ends at the next B-Roll, and that
+     B-Roll also starts the next group. Inside one group there is exactly ONE
+     character, the SAME character in every scene, and it is the only speaker.
+     Every video-with-audio scene lists exactly one char_id in "characters".
+     The character may change only after a B-Roll, never within a group.
+     There is NO dialogue between characters and no second person in frame:
+     the video model cannot keep two characters, or their voices, apart.
+
+  9. KEEP THE PERFORMANCE SIMPLE. The video model cannot make a character
+     handle objects or interact with the background. In every video-with-audio
+     scene the character stands centered in frame, faces the camera, speaks
+     straight into it, and uses only small body language (a nod, a head tilt,
+     a small hand gesture, a shrug). The character does NOT walk, point at or
+     touch props, pick anything up, sit, turn away, or move through the
+     environment. The camera stays still on a medium shot.
 
 TOP-LEVEL SHAPE (exact key set, exact order):
   {
@@ -114,7 +128,7 @@ TOP-LEVEL SHAPE (exact key set, exact order):
     "music_style":     <string>,
     "backgrounds":     [ {"id","prompt"}, ... ],
     "scenes":          [ <scene>, ... ],
-    "storyboard":      [ {"id","prompt","reference":[..]}, ... ],
+    "start_frame":     [ {"id","prompt","reference":[..]}, ... ],
   }
 
 WRITING PRINCIPLE FOR ALL IMAGE PROMPTS:
@@ -139,7 +153,7 @@ CHARACTER_COUNT  (director decides how many; user picks the actual characters la
   from a pre-existing library after blueprint approval, and the pipeline
   substitutes real character references at image-gen time.
 - The director's job: decide (a) HOW MANY distinct characters the video
-  needs, (b) which characters appear in which scenes, using SEMANTIC
+  needs, (b) which ONE character fronts each group (AI RULE #8), using SEMANTIC
   placeholder ids like "char_teacher", "char_student", "char_narrator".
 - "character_count" = count of distinct char_ids across ALL scene
   .characters lists. Validator hard-checks this invariant.
@@ -162,30 +176,27 @@ BACKGROUNDS
      details>. Wide establishing shot, NO CHARACTERS in frame. Empty
      environment plate. %(aspect)s format."
 
-STORYBOARD  (2x2 timecoded keyframes for reference-to-video scenes)
-One storyboard entry = ONE 8-second Veo clip split into four 2s panels.
-Used for every FIRST scene of a topic (video-with-audio) and optionally
-for B-Rolls needing precise composition.
-- "prompt" TEMPLATE (describe ACTIONS per panel — char_ids like
-  "char_teacher" are role labels the user will substitute; describe what
-  the character DOES, not how they LOOK):
-    "A 2x2 multipanel storyboard grid, showing
-     four sequential moments from an 8-second scene as a comic strip.
-     Panel 1 (top-left, 00:00-00:02): in the foreground, <char_id>
-     <action_1>; in the background, <setting>. Panel 2 (top-right,
-     00:02-00:04): <char_id> <action_2>. Panel 3 (bottom-left, 00:04-
-     00:06): <char_id> <action_3>. Panel 4 (bottom-right, 00:06-00:08):
-     <char_id> <action_4>. Character design and wardrobe identical
-     across panels. Clean black panel borders. %(aspect)s format."
-- "reference": list of char_ids (from scene.characters) + bg_ids used.
+START_FRAME  (the first frame of a group's first speaking scene)
+One start_frame entry per GROUP (AI RULE #8): it is the image the video model
+starts from, so it fixes the character's look and place for the whole group.
+It is a single frame — NOT a grid, NOT a storyboard.
+- "prompt" TEMPLATE (char_ids like "char_teacher" are role labels the user
+  will substitute; do not describe how the character LOOKS):
+    "<char_id> stands in the center of the frame, facing the camera, upper
+     body and head fully visible, hands relaxed at their sides, set into the
+     environment shown in the background reference. Medium shot at eye level,
+     the character fills about half the frame height. Character design and
+     wardrobe exactly as in the character reference; environment, lighting
+     and colors exactly as in the background reference. %(aspect)s format."
+- "reference": EXACTLY two ids: the group's ONE char_id, then ONE bg_id.
 
 SCENES  (ordered timeline of Veo clips, played back-to-back with NO cuts)
 
 EACH SCENE SHAPE (all keys REQUIRED unless marked nullable):
   {
     "id":             <string>,
-    "task":           "image-to-video" | "reference-to-video",
-    "model":          "Veo 3.1 Fast" | "Veo 3.1 Lite",
+    "task":           "image-to-video",
+    "model":          "Veo 3.1 Lite",
     "text":           <string>,       spoken words for TTS ("" for B-Roll)
     "prompt":         <string>,       structured Veo prompt
     "safety":         "Allow (Adult only)",
@@ -199,42 +210,41 @@ EACH SCENE SHAPE (all keys REQUIRED unless marked nullable):
     "audios":         [ {"char_id": <str>, "audio_id": <str>}, ... ]
   }
 
-TASK & MODEL SELECTION  (mechanical — driven by reference_from prefix):
-  - reference_from starts with "storyboard:"  →
-      task = "reference-to-video", model = "Veo 3.1 Fast"
-  - reference_from starts with "scene:", "background:" or bare scene id →
-      task = "image-to-video",     model = "Veo 3.1 Lite"
-  - Every B-Roll is image-to-video / Veo 3.1 Lite, because it references
-    either "background:<bg_id>" or "scene:<prev_id>" — never a storyboard.
+TASK & MODEL SELECTION  (every scene, no exceptions):
+  - task = "image-to-video", model = "Veo 3.1 Lite". There is no
+    reference-to-video. Each clip starts from ONE image, named by
+    reference_from: a start_frame, a background, or an earlier scene.
 
 CHARACTERS + AUDIOS  (per-scene):
-- "characters": char_ids present in this scene. Use SEMANTIC role-based
+- "characters": EXACTLY ONE char_id on a video-with-audio scene, the same one
+  as every other scene in its group (AI RULE #8). Use SEMANTIC role-based
   ids (e.g. "char_teacher").
 - "audios": one entry per char_id in "characters". Use placeholder
   audio_ids like "audio_teacher_voice".
 - The SAME char_id across multiple scenes MUST have the SAME audio_id
   (voice consistency).
-- video-with-audio: at least one char_id required, and EVERY char_id in
-  "characters" MUST have a matching entry in "audios".
+- video-with-audio: exactly one char_id, with a matching entry in "audios".
 - B-Roll: ALWAYS "characters": [] and "audios": [] — no exceptions.
 
 Each scene is one Veo clip. Two types:
 
   A) type = "video-with-audio"
-     - Character SPEAKS. Lips and jaw animate continuously.
+     - The character SPEAKS to the camera (AI RULE #9). Lips and jaw animate
+       continuously.
      - "text": exact spoken words (TTS input).
      - Word budget: HARD CEILING %(max_words)d words (= %(max_s)ss at
        %(pace)s WPS). If a source sentence exceeds this, SPLIT into
        multiple video-with-audio scenes with the SAME topic label.
-     - "length": null. "broll_role": null.
+     - "length": null (computed downstream from the word count).
+       "broll_role": null.
      - "topic": REQUIRED.
-     - "characters": non-empty. "audios": one entry per character.
+     - "characters": exactly one. "audios": one entry for that character.
      - "reference_from":
-         * FIRST scene of a topic: "storyboard:<sb_id>"
-           → task="reference-to-video", model="Veo 3.1 Fast"
-         * CONTINUATION scene (same topic as prev, word-count split):
+         * FIRST scene of a group: "start_frame:<sf_id>"
+         * CONTINUATION scene (same group, word-count split):
            "scene:<prev_scene_id>"
-           → task="image-to-video", model="Veo 3.1 Lite"
+     - Subject: the one character, centered, facing the camera. Action: speaks
+       to the camera with small body language only (AI RULE #9).
      - Action field MUST include verbatim:
          "the character's lips and jaw move continuously as if speaking,
           articulating dialogue that will be overlaid separately in
@@ -260,7 +270,7 @@ B-ROLL CONTINUITY:
     → task="image-to-video", model="Veo 3.1 Lite". That frame IS the
     starting image; the clip only holds it.
   - Previous scene MUST be video-with-audio.
-  - "characters": [], "audios": []. Anyone already in the inherited frame
+  - "characters": [], "audios": []. The speaker already in the inherited frame
     stays visible but MOTIONLESS — frozen mid-moment as if the video has
     paused, like a still photograph. Describe the stillness POSITIVELY
     ("the figure holds perfectly still, frozen mid-moment"); never with
@@ -281,12 +291,10 @@ B-ROLL CONTINUITY:
 
 SCENE PROMPT FORMAT (strict — render layer parses these labels):
 "Cinematography: <camera + shot composition + lens/focus>,
-Subject: <for video-with-audio: speaking character(s) and framing.
+Subject: <for video-with-audio: the one speaking character, centered, facing camera.
    For B-Roll: the environment, object, or texture in frame — no people>,
  Action: <what happens. For video-with-audio, include the verbatim lip-
-   sync clause. For storyboard-referenced scenes, also include: "Do not
-   display the storyboard grid at the start of the clip; begin animation
-   directly from Panel 1 as depicted in the reference.">,
+   sync clause, then only a nod, head tilt, or small hand gesture.>,
  Context: <environment + background elements>,
  Style and Ambience: <mood + lighting>, wordless illustration; all
    surfaces smooth and blank; no signage, no writing, no text, no labels, or numerical
@@ -311,7 +319,8 @@ OUTPUT LANGUAGE — applies to every scene's "text"
 COVERAGE  (how much of the SOURCE the video must teach)
 - Produce between %(min_topics)d and %(max_topics)d distinct topics, each a
   different part of the SOURCE, taken in the order the SOURCE presents them.
-- Each topic has 2-4 video-with-audio scenes and ends with a closing B-Roll.
+- Each topic is one group: 2-4 video-with-audio scenes, all with the SAME
+  one character, and it ends with a closing B-Roll.
 - Do NOT stop after the first section. OBJECTIVE words like "most important"
   or "crucial" choose WHICH parts to keep, never how few topics to write.
   If the SOURCE is short, cover all of it.
@@ -319,7 +328,8 @@ COVERAGE  (how much of the SOURCE the video must teach)
 TIMELINE RULES OF THUMB:
 - Open with a short B-Roll (broll_role="opening").
 - Video-with-audio: <= %(max_words)d words IN %(language)s, references
-  storyboard OR chains from previous same-topic scene, sets "topic".
+  a start_frame (first of its group) OR chains from the previous scene of
+  its group, sets "topic".
 - Same-topic video-with-audio scenes play back-to-back.
 - B-Roll only at true topic boundaries.
 - Every topic ends with a closing B-Roll, including the final topic.
@@ -414,18 +424,12 @@ def _wc(s: str) -> int:
 # reference_from grammar — ONE definition, shared with L5 (scene_gen), which
 # re-checks it at generation time and resolves the referenced asset from it.
 # ----------------------------------------------------------------------
-REFERENCE_PREFIXES = ("storyboard", "background", "scene")
+REFERENCE_PREFIXES = ("start_frame", "background", "scene")
 
-_FAST = ("reference-to-video", "Veo 3.1 Fast")
-_LITE = ("image-to-video", "Veo 3.1 Lite")
-
-# The Veo route each prefix implies. Model names live here only — scene_gen
-# imports them rather than repeating the strings.
-ROUTE_BY_PREFIX: dict[str, tuple[str, str]] = {
-    "storyboard": _FAST,
-    "background": _LITE,
-    "scene": _LITE,
-}
+# Every scene is image-to-video: the prefix only says WHICH image seeds the clip.
+# Model names live here only — scene_gen imports them rather than repeating them.
+ROUTE = ("image-to-video", "Veo 3.1 Lite")
+ROUTE_BY_PREFIX: dict[str, tuple[str, str]] = {p: ROUTE for p in REFERENCE_PREFIXES}
 
 
 def parse_reference(reference_from: str) -> tuple[str | None, str, bool]:
@@ -434,8 +438,8 @@ def parse_reference(reference_from: str) -> tuple[str | None, str, bool]:
     Convert the raw reference_from string into a structured form 
     that the validator can easily understand.
 
-    prefix is 'storyboard' | 'background' | 'scene', or None when the value is
-    a bare keyword with no id ("storyboard", "background", "scene") — ambiguous.
+    prefix is 'start_frame' | 'background' | 'scene', or None when the value is
+    a bare keyword with no id ("start_frame", "background", "scene") — ambiguous.
     explicit=False marks a bare earlier-scene id (no "scene:" prefix); the
     validator reports that case differently from an explicit "scene:<id>".
     """
@@ -594,19 +598,28 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
 
     ref_ids = all_char_ids | bg_ids
 
-    # --- storyboard ---
-    sb_ids: set[str] = set()
-    for sb in bp.storyboard:
-        if sb.id in sb_ids:
-            problems.append(f"duplicate storyboard id '{sb.id}'")
-        sb_ids.add(sb.id)
-        for r in sb.reference:
-            if r not in ref_ids:
-                problems.append(
-                    f"storyboard '{sb.id}': reference '{r}' is not a "
-                    "known char_id (from any scene) or background id"
-                )
-
+    # --- start_frame: one per group, each = ONE character + ONE background ---
+    sf_ids: set[str] = set()
+    sf_char: dict[str, str] = {}
+    for sf in bp.start_frame:
+        if sf.id in sf_ids:
+            problems.append(f"duplicate start_frame id '{sf.id}'")
+        sf_ids.add(sf.id)
+        chars = [r for r in sf.reference if r in all_char_ids]
+        bgs = [r for r in sf.reference if r in bg_ids]
+        unknown = [r for r in sf.reference if r not in ref_ids]
+        if unknown:
+            problems.append(
+                f"start_frame '{sf.id}': reference {unknown} is not a "
+                "known char_id (from any scene) or background id"
+            )
+        if len(chars) != 1 or len(bgs) != 1 or len(sf.reference) != 2:
+            problems.append(
+                f"start_frame '{sf.id}': reference must be exactly one char_id "
+                f"and one background id (got {sf.reference})"
+            )
+        elif chars:
+            sf_char[sf.id] = chars[0]
 
     # --- scene-level ---
     # Single forward pass. `seen_scenes` grows as we go, which is what makes
@@ -615,6 +628,11 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
     # scene list order is authoritative: reordering scenes changes validity.
     seen_scenes: set[str] = set()
     prev_scene: Scene | None = None
+    sf_used: set[str] = set()
+    # Group state (AI RULE #8): a group is the run of scenes between two B-Rolls,
+    # and it has ONE character. B-Roll closes the group; the next speaking scene
+    # opens a new one and may name a different character.
+    group_char: str | None = None
     # Topic-boundary state machine. The rule being enforced (AI RULE #4) is:
     # exactly one closing B-Roll between two speaking scenes of DIFFERENT topics,
     # and none between two speaking scenes of the SAME topic. B-Roll scenes don't
@@ -634,15 +652,22 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
         if original_prefix is None:
             problems.append(
                 f"{s.id}: reference_from '{ref}' is ambiguous — use "
-                "'storyboard:<sb_id>', 'background:<bg_id>' or 'scene:<scene_id>'"
+                "'start_frame:<sf_id>', 'background:<bg_id>' or 'scene:<scene_id>'"
             )
-        elif original_prefix == "storyboard":
+        elif original_prefix == "start_frame":
             if not ref:
-                problems.append(f"{s.id}: reference_from 'storyboard:' missing id")
-            elif ref not in sb_ids:
+                problems.append(f"{s.id}: reference_from 'start_frame:' missing id")
+            elif ref not in sf_ids:
                 problems.append(
-                    f"{s.id}: reference_from unknown storyboard '{ref}'"
+                    f"{s.id}: reference_from unknown start_frame '{ref}'"
                 )
+            elif ref in sf_used:
+                problems.append(
+                    f"{s.id}: start_frame '{ref}' already starts another scene — "
+                    "one start_frame per group"
+                )
+            else:
+                sf_used.add(ref)
         elif original_prefix == "background":
             if not ref:
                 problems.append(f"{s.id}: reference_from 'background:' missing id")
@@ -661,7 +686,7 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
             if ref not in seen_scenes:
                 problems.append(
                     f"{s.id}: reference_from '{ref}' is neither a known "
-                    "storyboard/background reference nor an earlier scene id"
+                    "start_frame/background reference nor an earlier scene id"
                 )
 
         # task/model mapping
@@ -737,7 +762,7 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
                 # 1-tuple — no trailing comma. So this is a substring test, not a
                 # membership test. Two consequences:
                 #   * it happens to give the right answer for the three real
-                #     prefixes ("background" matches; "storyboard"/"scene" don't),
+                #     prefixes ("background" matches; "start_frame"/"scene" don't),
                 #     which is why nothing has surfaced;
                 #   * original_prefix is None when reference_from is a bare
                 #     keyword, and `None in "background"` raises TypeError. An
@@ -768,15 +793,26 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
                     f"<= {config.max_scene_seconds}s at "
                     f"{config.words_per_second} WPS"
                 )
-            if s.length is not None:
+            if len(s.characters) != 1:
                 problems.append(
-                    f"{s.id}: video-with-audio must leave 'length' null"
+                    f"{s.id}: video-with-audio must list exactly one char_id in "
+                    f"'characters' (got {len(s.characters)}) — one speaker, no dialogue"
                 )
-            if not s.characters:
+            elif group_char is None:
+                group_char = s.characters[0]
+            elif s.characters[0] != group_char:
                 problems.append(
-                    f"{s.id}: video-with-audio must list at least one "
-                    "char_id in 'characters' (speaker required)"
+                    f"{s.id}: character changes from '{group_char}' to "
+                    f"'{s.characters[0]}' inside one group — the character may only "
+                    "change after a B-Roll"
                 )
+            if original_prefix == "start_frame" and len(s.characters) == 1:
+                want = sf_char.get(ref)
+                if want is not None and want != s.characters[0]:
+                    problems.append(
+                        f"{s.id}: start_frame '{ref}' shows '{want}' but the scene's "
+                        f"character is '{s.characters[0]}'"
+                    )
             # topic continuity
             is_continuation = (
                 prev_scene is not None
@@ -786,11 +822,11 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
                 and prev_scene.topic == s.topic
             )
             if is_continuation:
-                if original_prefix == "storyboard":
+                if original_prefix == "start_frame":
                     problems.append(
                         f"{s.id}: video-with-audio continues topic "
                         f"'{s.topic}' from '{prev_scene.id}' — must chain "
-                        f"from previous scene, not start a fresh storyboard"
+                        f"from previous scene, not start a fresh start_frame"
                     )
                 elif original_prefix == "scene" and ref != prev_scene.id:
                     problems.append(
@@ -799,11 +835,11 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
                         f"'scene:{prev_scene.id}'"
                     )
             else:
-                if original_prefix != "storyboard":
+                if original_prefix != "start_frame":
                     problems.append(
                         f"{s.id}: video-with-audio starts topic "
                         f"'{s.topic}' — reference_from must be "
-                        f"'storyboard:<sb_id>' (got '{s.reference_from}')"
+                        f"'start_frame:<sf_id>' (got '{s.reference_from}')"
                     )
             # mouth-motion
             p = s.prompt.lower()
@@ -817,16 +853,6 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
         missing_labels = [l for l in _REQUIRED_PROMPT_LABELS if l not in s.prompt]
         if missing_labels:
             problems.append(f"{s.id}: prompt missing labels {missing_labels}")
-
-        # storyboard-referenced: instruct Veo to skip grid
-        if original_prefix == "storyboard":
-            p = s.prompt.lower()
-            if "storyboard grid" not in p or "panel 1" not in p:
-                problems.append(
-                    f"{s.id}: storyboard-referenced scene prompt must "
-                    "instruct Veo NOT to display the storyboard grid and "
-                    "to begin from Panel 1"
-                )
 
         # wordless anchor
         p_lower = s.prompt.lower()
@@ -866,9 +892,17 @@ def validate_blueprint(bp: VideoBlueprint, config: DirectorConfig,
             closing_since_talk = True
             closing_id = s.id
 
+        if s.type == "B-Roll":
+            group_char = None
+
         seen_scenes.add(s.id)
         prev_scene = s
 
+    for unused in sorted(sf_ids - sf_used):
+        problems.append(
+            f"start_frame '{unused}' is never used — one start_frame per group, "
+            "referenced by the first scene of that group"
+        )
     return problems
 
 
@@ -976,6 +1010,7 @@ class OpenAIDirector:
 # Blueprint-shape rules (keyed on blueprint_type; read from config.json).
 # Also consumed by the render layer (L8) for the opening-section decision.
 # ----------------------------------------------------------------------
+SPEECH_MIN_SECONDS = 4                       # shortest clip the video model makes
 OPENING_LENGTH_S = 4.0                       # 'opening' plate is ALWAYS 4s
 BLUEPRINT_TYPES = ("opening", "summary")
 
@@ -1021,6 +1056,28 @@ def enforce_opening_length(blueprint: dict, run_dir: str | Path | None = None,
         if sc.get("broll_role") == "opening" and sc.get("type") == "B-Roll":
             sc["length"] = float(seconds)
     return bp
+
+def speaking_seconds(text: str, words_per_second: float,
+                     floor_s: float = SPEECH_MIN_SECONDS) -> int:
+    """Whole seconds a line takes to say: word count / speaking rate, ROUNDED DOWN
+    (4.4s -> 4s), never below `floor_s` (the video model's shortest clip).
+    Rounding down is deliberate: a clip with spare seconds is one the model fills
+    with babble of its own."""
+    return max(int(floor_s), math.floor(len(text.split()) / words_per_second))
+
+
+def fill_speaking_lengths(blueprint: dict, words_per_second: float) -> dict:
+    """Set `length` on every video-with-audio scene from ITS OWN word count.
+
+    The director leaves it null; this is where it is computed. Per scene, not per
+    group — a group only limits who speaks, it does not pool durations. B-Roll
+    keeps the length the director set. Call BEFORE scene generation (L5)."""
+    bp = deepcopy(blueprint)
+    for sc in bp.get("scenes", []):
+        if sc.get("type") == "video-with-audio":
+            sc["length"] = float(speaking_seconds(sc.get("text") or "", words_per_second))
+    return bp
+
 
 DEFAULT_STYLE_TYPE = "realism"          # conservative: preserves current opening treatment
 

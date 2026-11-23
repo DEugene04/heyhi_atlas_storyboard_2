@@ -15,7 +15,8 @@ import pytest
 from app.clients.video_veo_client import VEO_ALLOWED_SECONDS, snap_duration
 from app.pipeline.director import (
     OPENING_LENGTH_S, derive_style_type, enforce_opening_length,
-    has_opening_section, read_blueprint_type,
+    fill_speaking_lengths, has_opening_section, read_blueprint_type,
+    speaking_seconds,
 )
 from app.pipeline.image_gen import _compose_prompt
 from app.pipeline.scene_gen import (
@@ -117,12 +118,30 @@ def test_long_broll_rounded_up_to_a_whole_second():
 
 
 @pytest.mark.parametrize("words,expected", [
-    (0, 4.0), (5, 4.0), (8, 5.0), (12, 6.0), (17, 8.0), (20, 8.0), (40, 8.0),
+    (0, 4), (10, 4), (11, 4), (12, 4), (13, 5), (14, 5), (15, 6), (20, 8),
 ])
-def test_speaking_scenes_sized_to_their_dialogue(words, expected):
-    """words / 2.5 wps + 1s headroom, 4s floor, 8s ceiling — so a short line is not
-    given 8s to fill with babble."""
-    scene = {"type": "video-with-audio", "length": None, "text": " ".join(["word"] * words)}
+def test_speaking_seconds_rounds_down_with_a_four_second_floor(words, expected):
+    """words / 2.5 wps (150 wpm), ROUNDED DOWN: 11 words = 4.4s -> 4s, never longer,
+    so the model has no spare seconds to babble in."""
+    assert speaking_seconds(" ".join(["word"] * words), 2.5) == expected
+
+
+def test_fill_speaking_lengths_is_per_scene_and_leaves_broll_alone():
+    bp = {"scenes": [
+        {"id": "a", "type": "video-with-audio", "text": " ".join(["w"] * 15), "length": None},
+        {"id": "b", "type": "video-with-audio", "text": " ".join(["w"] * 11), "length": None},
+        {"id": "c", "type": "B-Roll", "text": "", "length": 1.0},
+    ]}
+    out = fill_speaking_lengths(bp, 2.5)
+    assert [s["length"] for s in out["scenes"]] == [6.0, 4.0, 1.0]
+    assert bp["scenes"][0]["length"] is None, "input must not be mutated"
+
+
+@pytest.mark.parametrize("words,length,expected", [
+    (5, 4.0, 4.0), (15, 6.0, 6.0), (20, 8.0, 8.0), (40, 99.0, 8.0),
+])
+def test_veo_is_asked_for_the_scenes_own_length(words, length, expected):
+    scene = {"type": "video-with-audio", "length": length, "text": " ".join(["w"] * words)}
     assert veo_generation_seconds(scene) == expected <= VEO_VIDEO_SECONDS
 
 

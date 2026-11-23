@@ -37,9 +37,10 @@ class DirectorConfig:
     aspect_ratio: AspectRatio = "16:9"
     blueprint_type: BlueprintType = "opening"
 
-    # Internal pacing limits used by both prompt generation and validation.
-    # Speaking scenes are capped at:
-    #   words_per_second × max_scene_seconds (default: 2.5 × 8 = 20 words).
+    # Internal pacing limits used by prompt generation, validation, and the
+    # length fill. 2.5 words/second = 150 words/minute. Speaking scenes are capped at:
+    #   words_per_second × max_scene_seconds (default: 2.5 × 8 = 20 words),
+    # and each one's `length` is floor(words / words_per_second), minimum 4s.
     # Increasing max_scene_seconds alone is insufficient because Veo only
     # supports 4/6/8-second clips.
     words_per_second: float = 2.5

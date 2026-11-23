@@ -33,18 +33,20 @@
     },
     {
       "id": "scene_002",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "Welcome to TechNova Solutions. This Human Resources Policy Manual is designed to provide employees with a clear understanding.",
-      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a friendly and professional figure, standing in a modern office lobby. Action: char_narrator gestures with an open hand, then smiles warmly, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference. Context: A bright, contemporary office lobby with soft lighting. Style and Ambience: Welcoming and informative mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Soft, ambient office sounds. Language: english",
+      "prompt": "Cinematography: Medium shot, char_narrator framed from the chest up, looking directly at the viewer. Subject: char_narrator, a friendly and professional figure, standing in a modern office lobby. Action: char_narrator gestures with an open hand, then smiles warmly, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Context: A bright, contemporary office lobby with soft lighting. Style and Ambience: Welcoming and informative mood, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background. Ambient noise: Soft, ambient office sounds. Language: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_intro",
+      "reference_from": "start_frame:sf_intro",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 7.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
-      "characters": ["char_female_formal_cartoon_1"],
+      "characters": [
+        "char_female_formal_cartoon_1"
+      ],
       "audios": [
         {
           "char_id": "char_female_formal_cartoon_1",
@@ -62,10 +64,12 @@
       "reference_from": "scene:scene_002",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
-      "characters": ["char_female_formal_cartoon_1"],
+      "characters": [
+        "char_female_formal_cartoon_1"
+      ],
       "audios": [
         {
           "char_id": "char_female_formal_cartoon_1",
@@ -74,12 +78,14 @@
       ]
     }
   ],
-  "storyboard": [
+  "start_frame": [
     {
-      "id": "sb_intro",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip. Panel 1 (top-left, 00:00-00:02): in the foreground, char_narrator stands confidently, gesturing with an open hand towards the viewer; in the background, a modern office lobby. Panel 2 (top-right, 00:02-00:04): char_narrator smiles warmly, looking directly at the viewer, with hands clasped loosely in front. Panel 3 (bottom-left, 00:04-00:06): char_narrator gestures towards an unseen group, indicating inclusion and teamwork. Panel 4 (bottom-right, 00:06-00:08): char_narrator nods reassuringly, maintaining eye contact with the viewer. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
-      "reference": ["char_female_formal_cartoon_1", "bg_office_lobby"]
+      "id": "sf_intro",
+      "prompt": "char_female_formal_cartoon_1 stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
+      "reference": [
+        "char_female_formal_cartoon_1",
+        "bg_office_lobby"
+      ]
     }
   ]
 }

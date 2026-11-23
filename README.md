@@ -85,7 +85,7 @@ Full walkthrough with curl: [setup-and-run.md](docs/setup-and-run.md#5-running-i
 L1  /pipeline/config, /pipeline/upload    config.json, source.txt
 L2  /pipeline/direct       💸             blueprint.json          ← the human gate
 L3  /pipeline/select                      blueprint.json resolved
-L4  /pipeline/assets       💸             backgrounds/, storyboard/
+L4  /pipeline/assets       💸             backgrounds/, start_frame/
 L5  /pipeline/scenes       💸💸           veo_raw/, scenes/       ← L5 and L6 interleave
 L6  (same endpoint)        💸             tts/, scenes/ rewritten
 L7  /pipeline/music        💸             music_bg/track.mp3

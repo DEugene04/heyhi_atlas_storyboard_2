@@ -22,21 +22,14 @@ from app.clients.video_veo_client import (
 )
 from app.config import DirectorConfig
 from app.pipeline import external_tts
-from app.pipeline.director import ROUTE_BY_PREFIX, parse_reference
-
-
-# Expected Veo routes for each reference type.
-_FAST = ROUTE_BY_PREFIX["storyboard"]
-_LITE = ROUTE_BY_PREFIX["scene"]
+from app.pipeline.director import (
+    ROUTE, ROUTE_BY_PREFIX, SPEECH_MIN_SECONDS, parse_reference, speaking_seconds,
+)
 
 # B-Roll is generated at >=4s. Speaking scenes are sized to their dialogue and
 # never exceed VEO_VIDEO_SECONDS (the director caps text to fit it).
 VEO_BROLL_SECONDS = 4.0
 VEO_VIDEO_SECONDS = 8.0
-# Headroom over the pure reading time: speech onset plus a short tail. Every spare
-# second is a second the model can fill with babble, so keep it small. It must stay
-# large enough that the clip outlasts the TTS, since L6 can only trim, not extend.
-SPEECH_HEADROOM_S = 1.0
 # Appended after the spoken line so the model does not keep "speaking" into spare time.
 SILENT_AFTER_LINE = " Once the line is finished the character stays silent with their mouth closed."
 
@@ -51,26 +44,20 @@ def _expected_route(reference_from: str) -> tuple[str, str] | None:
     return ROUTE_BY_PREFIX.get(prefix or "")
 
 # Based on the reference_from, which veo task do we use
-# Storyboard -> reference-to-image
-# Background & previous scene -> image-to-video
+# Every scene is image-to-video; reference_from only picks the seed image
+# (start frame, background, or the previous scene's last frame).
 def route(scene: dict) -> tuple[str, str]:
     """Validate and return the scene's (task, model) route."""
-    task, model = scene.get("task"), scene.get("model")
-    # Validate the task and model
-    pair = (task, model)
-    if pair not in (_FAST, _LITE):
-        raise VeoRouteError(f"scene '{scene.get('id')}': incoherent task/model {pair}")
-    exp = _expected_route(scene.get("reference_from", ""))
-    if exp is None:
+    pair = (scene.get("task"), scene.get("model"))
+    if pair != ROUTE:
+        raise VeoRouteError(
+            f"scene '{scene.get('id')}': task/model {pair} is not {ROUTE} — "
+            "every scene is image-to-video")
+    if _expected_route(scene.get("reference_from", "")) is None:
         raise VeoRouteError(
             f"scene '{scene.get('id')}': ambiguous reference_from "
-            f"'{scene.get('reference_from')}' — use 'storyboard:<sb_id>', "
+            f"'{scene.get('reference_from')}' — use 'start_frame:<sf_id>', "
             f"'background:<bg_id>' or 'scene:<scene_id>'"
-        )
-    if pair != exp:
-        raise VeoRouteError(
-            f"scene '{scene.get('id')}': task/model {pair} does not match "
-            f"reference_from '{scene.get('reference_from')}' (expected {exp})"
         )
     return pair
 
@@ -81,17 +68,12 @@ def _ref_id(reference_from: str) -> tuple[str, str]:
     return (prefix or "scene"), rid
 
 # Create the Veo prompt so we can evaluate it, for the time being
-def compose_veo_prompt(scene: dict, background_picture: int | None = None) -> str:
+def compose_veo_prompt(scene: dict) -> str:
     """Build the final prompt sent to Veo / H3.
 
-    `background_picture` is the 1-based position of the shared-library background
-    among the request's reference images; H3 addresses references as `<Picture N>`.
     Speaking scenes append the dialogue so the model generates matching mouth movement.
     """
     prompt = scene["prompt"]
-    if background_picture:
-        prompt = (f"{prompt} The environment matches <Picture {background_picture}>, "
-                  "in the same colors, lighting and layout.")
     if scene.get("type") == "video-with-audio":
         text = (scene.get("text") or "").strip()
         if text:
@@ -101,16 +83,17 @@ def compose_veo_prompt(scene: dict, background_picture: int | None = None) -> st
 def veo_generation_seconds(scene: dict) -> float:
     """Length asked of Veo (NOT the blueprint length). Pure — no assets needed.
     B-Roll: 4s floor (ceil(length) if longer), trimmed to blueprint length after.
-    Video-with-audio: just long enough for the dialogue (words / pace + headroom,
-    4s floor, 8s ceiling), so the model has no spare seconds to babble in; L6 then
-    trims to the last TTS end."""
+    Video-with-audio: the scene's own `length` (words / pace, rounded down, 4s floor;
+    see director.fill_speaking_lengths), 8s ceiling, so the model has no spare
+    seconds to babble in; L6 then trims to the last TTS end."""
     if scene.get("type") == "B-Roll":
         length = scene.get("length")
         return (VEO_BROLL_SECONDS if not length or length <= VEO_BROLL_SECONDS
                 else float(math.ceil(length)))
-    words = len((scene.get("text") or "").split())
-    need = words / DirectorConfig.words_per_second + SPEECH_HEADROOM_S
-    return float(min(VEO_VIDEO_SECONDS, max(VEO_BROLL_SECONDS, math.ceil(need))))
+    length = scene.get("length")
+    if not length:
+        length = speaking_seconds(scene.get("text") or "", DirectorConfig.words_per_second)
+    return float(min(VEO_VIDEO_SECONDS, max(SPEECH_MIN_SECONDS, length)))
 
 def scene_ready(run_dir: str | Path, scene: dict) -> bool:
     """A scene is finished when its final clip exists. A speaking scene's working copy
@@ -143,14 +126,8 @@ def continuations_of(blueprint: dict, scene_id: str) -> list[str]:
 class SceneGenerator:
     def __init__(self, run_dir: str | Path, client: VeoClient,
                  max_retries: int = 3, backoff_s: float = 2.0,
-                 background: Path | None = None, reference_video: Path | None = None,
                  seed: int | None = None, turbo: bool | None = None):
         self.run = Path(run_dir)
-        # Shared-library extras (H3). Applied to reference-to-video scenes only:
-        # image-to-video scenes already carry a first frame, which H3 cannot combine
-        # with reference images or video.
-        self.background = background
-        self.reference_video = reference_video
         self.seed = seed
         self.turbo = turbo
         self.client = client
@@ -161,47 +138,34 @@ class SceneGenerator:
         self.reused: list[Path] = []            # scenes run_all(resume=True) skipped
 
     # What image should Veo use as input for this scene
-    def _resolve_input_paths(self, scene: dict) -> tuple[Path | None, list[Path]]:
-        """Resolve the image seed and reference images for a scene."""
+    def _resolve_seed_image(self, scene: dict) -> Path:
+        """Resolve the image the clip starts from."""
         kind, rid = _ref_id(scene.get("reference_from", ""))
-        if kind == "storyboard":
-            p = self.run / "storyboard" / f"{rid}.png"
+        if kind in ("start_frame", "background"):
+            folder = "start_frame" if kind == "start_frame" else "backgrounds"
+            p = self.run / folder / f"{rid}.png"
             if not p.is_file():
-                raise VeoError(f"scene '{scene['id']}': storyboard '{rid}.png' missing")
-            return None, [p]                              # reference-to-video
-        if kind == "background":
-            p = self.run / "backgrounds" / f"{rid}.png"
-            if not p.is_file():
-                raise VeoError(f"scene '{scene['id']}': background '{rid}.png' missing")
-            return p, []                                  # image-to-video seed
+                raise VeoError(f"scene '{scene['id']}': {kind} '{rid}.png' missing")
+            return p
         # Seed from the last frame of the previous processed scene.
         prev = self.scenes_dir / f"{rid}.mp4"
         if not prev.is_file():
             raise VeoError(f"scene '{scene['id']}': previous scene '{rid}.mp4' missing")
         seed = self.scenes_dir / f"_lastframe_{rid}.png"
         extract_last_frame(prev, seed)
-        return seed, []
+        return seed
 
     def build_spec(self, scene: dict) -> VeoJobSpec:
         """Build the Veo request"""
         task, model = route(scene)
-        image_path, ref_paths = self._resolve_input_paths(scene)
-        image = image_path.read_bytes() if image_path else None
-        references = [p.read_bytes() for p in ref_paths]
-        is_ref = task == "reference-to-video"
-        background_picture = None
-        if is_ref and self.background:
-            references.append(self.background.read_bytes())
-            background_picture = len(references)
         # GENERATION length sent to Veo (not the blueprint length)
         gen_seconds = veo_generation_seconds(scene)
         return VeoJobSpec(
             scene_id=scene["id"], task=task, model=model,
-            prompt=compose_veo_prompt(scene, background_picture),           # appends spoken text for video-with-audio
+            prompt=compose_veo_prompt(scene),           # appends spoken text for video-with-audio
             aspect_ratio=scene.get("aspect_ratio", "16:9"),
-            duration_s=gen_seconds, image=image, references=references,
+            duration_s=gen_seconds, image=self._resolve_seed_image(scene).read_bytes(),
             safety=scene.get("safety", "Allow (Adult only)"),
-            reference_video=self.reference_video if is_ref else None,
             seed=self.seed, turbo=self.turbo,
         )
 

@@ -34,7 +34,7 @@ User selects characters + audio
 Asset generation (Gemini 2.5 Flash Image)
    ├── characters
    ├── backgrounds
-   ├── storyboards
+   ├── start frames (one per group)
    └── keyframes
         ↓
 Scene generation (Veo 3.1 Fast / Lite)
@@ -57,7 +57,7 @@ Output path convention:
 _storage/atlas_storyboard/run_0X/
 ├── backgrounds/
 ├── characters/
-├── storyboard/
+├── start_frame/
 └── keyframe/
 └── music_bg/
 ```
@@ -108,7 +108,7 @@ Uses **Gemini 2.5 Flash** to interpret the source text + config. Outputs `bluepr
   "music_style": "<string>",
   "backgrounds":[ { "id": "...", "prompt": "..." } ],
   "scenes":     [ <scene> ],
-  "storyboard": [ { "id": "...", "model": "...", "prompt": "...", "reference": ["..."] } ],
+  "start_frame": [ { "id": "...", "prompt": "...", "reference": ["<char_id>", "<bg_id>"] } ],
   "keyframe":   [ { "id": "...", "model": "...", "prompt": "...", "reference": ["<bg_id>"] } ]
 }
 ```
@@ -119,7 +119,7 @@ Uses **Gemini 2.5 Flash** to interpret the source text + config. Outputs `bluepr
 | `character_count` | The number of characters needed for this blueprint or video, this number is also used to limit the number of characters that the user can pass in the config |
 | `music_style`     | The prompt for the background music → Google Lyria                                                                                                           |
 | `backgrounds`     | One entry per backgrounds the video needs. `prompt` → Gemini 2.5 Flash Image (+ `style`) → saved to `run_0X/backgrounds/ → saved to `run_0X/backgrounds/`    |
-| `storyboard`      | A 2 by 2 reference images for scenes with the type video-with-audio                                                                                          |
+| `start_frame`     | One per group (the scenes between two B-Rolls): the group's one character placed into a background. First frame of the group's first video-with-audio scene |
 | `keyframe`        | A single frame of reference images built from a background (`reference` holds `bg_id`s) that is used for scenes with the type of broll                       |
 | `scenes`          | Ordered list of scene objects (§4.2)                                                                                                                         |
 
@@ -128,23 +128,19 @@ Uses **Gemini 2.5 Flash** to interpret the source text + config. Outputs `bluepr
 ```json
 {
   "id": "<string>",
-  "task": "image-to-video | reference-to-video",
-  "model": "Veo 3.1 Fast | Veo 3.1 Lite",
-  "characters": ["char_id_1", "char_id_2"],
+  "task": "image-to-video",
+  "model": "Veo 3.1 Lite",
+  "characters": ["char_id_1"],
   "audios": [
     {
       "char_id": "char_id_1",
       "audio_id": "audio_id_1"
-    },
-    {
-      "char_id": "char_id_2",
-      "audio_id": "audio_id_2"
     }
   ],
   "text": "<string>",
   "prompt": "<string>",
   "safety": "Allow (Adult only)",
-  "reference_from": "storyboard:<sb_id> | keyframe:<kf_id> | <prev_scene_id>",
+  "reference_from": "start_frame:<sf_id> | keyframe:<kf_id> | <prev_scene_id>",
   "type": "video-with-audio | B-Roll",
   "broll_role": "null | opening | closing | topic-transition",
   "length": "null | <number>",
@@ -155,19 +151,29 @@ Uses **Gemini 2.5 Flash** to interpret the source text + config. Outputs `bluepr
 
 | Field            | Description                                                                                                                                                                                                                                                                      |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `task`           | Veo 3.1 task type                                                                                                                                                                                                                                                                |
-| `model`          | Which Veo variant generates this scene                                                                                                                                                                                                                                           |
-| `characters`     | A list of selected characters id that the user have selected                                                                                                                                                                                                                     |
+| `task`           | Always `image-to-video`                                                                                                                                                                                                                                                          |
+| `model`          | Always `Veo 3.1 Lite`                                                                                                                                                                                                                                                            |
+| `characters`     | Exactly one char id on a `video-with-audio` scene, the same one for every scene of its group (the scenes between two B-Rolls). It may change only after a B-Roll. `[]` for B-Roll. No dialogue between characters |
 | `audios`         | Contains audio objects that contains a character id and their respective audio id                                                                                                                                                                                                |
 | `text`           | Spoken dialogue. `""` for B-Roll                                                                                                                                                                                                                                                 |
 | `prompt`         | Veo-optimized prompt. **Final prompt sent to Veo** = `<prompt>` + `Audio sync: The character says "<text>"`                                                                                                                                                                      |
 | `safety`         | Veo safety parameter                                                                                                                                                                                                                                                             |
-| `reference_from` | • `storyboard:<sb_id>` / `keyframe:<kf_id>` → attach that image as Veo input<br>• `<prev_scene_id>` → extract the **last frame** of that scene -- after it has been merged with TTS and trimmed by the TTS layer -- and use it as the input image, this ensures video continuity |
+| `reference_from` | • `start_frame:<sf_id>` / `keyframe:<kf_id>` → attach that image as Veo input<br>• `<prev_scene_id>` → extract the **last frame** of that scene -- after it has been merged with TTS and trimmed by the TTS layer -- and use it as the input image, this ensures video continuity |
 | `type`           | `video-with-audio` = character speaking on-screen, with sound<br>`B-Roll` = filler/transition, no sound                                                                                                                                                                          |
 | `broll_role`     | `null` for `video-with-audio`; otherwise `opening` / `closing` / `topic-transition`                                                                                                                                                                                              |
-| `length`         | Seconds. **Required for B-Roll**, `null` for `video-with-audio`. Veo's minimum output is 4s — shorter B-Roll is trimmed downstream                                                                                                                                               |
+| `length`         | Seconds. **Required for B-Roll** (Veo's minimum output is 4s — shorter B-Roll is trimmed downstream). For `video-with-audio` the Director leaves it `null` and it is filled from that scene's own word count: `max(4, floor(words / 2.5))` (150 wpm, rounded down) |
 | `aspect_ratio`   | `16:9` or `9:16`                                                                                                                                                                                                                                                                 |
 | `topic`          | **Required** for `video-with-audio`, optional for `B-Roll`                                                                                                                                                                                                                       |
+
+---
+
+### 4.3 Group rules (Director)
+
+- A **group** is every scene between two B-Rolls; each B-Roll ends one group and starts the next.
+- **One character per group**, the same in every scene of the group; it may change only after a B-Roll. No dialogue between characters.
+- Each group has one `start_frame` (character + background), used by its first video-with-audio scene.
+- Keep the performance simple: the character is centered, speaks to the camera, and uses only small body language. No object or background interaction.
+- `length` for each video-with-audio scene is computed per scene (not per group) from its own word count: `max(4, floor(words / 2.5))`.
 
 ---
 
@@ -189,15 +195,15 @@ Uses **Gemini 2.5 Flash** to interpret the source text + config. Outputs `bluepr
 
 ## 6. Layer 4 — Asset generation (Gemini 2.5 Flash Image)
 
-**Goal:** Generates background, storyboards and keyframes
+**Goal:** Generates background, start frames and keyframes
 
 **Process:**
 
-1. Take the backgrounds/storyboard/keyframes
+1. Take the backgrounds/start_frame/keyframes
 2. For each backgrounds: loop through bp.backgrounds, generate from .prompt.
-3. For each storyboards: loop through bp.storyboard, generate from .prompt + attach .reference images.
+3. For each start frame: loop through bp.start_frame, generate from .prompt + attach the group's character image and the background (.reference).
 4. For each keyframes: loop through bp.keyframe, generate from .prompt + attach the single background reference.
-5. Save the background, keyframes and storyboard with their respective id as the file name
+5. Save the background, keyframes and start frames with their respective id as the file name
 
 **Note**: Characters are NOT generated here — user selects from library in Layer 3.
 
@@ -212,7 +218,7 @@ Uses **Gemini 2.5 Flash** to interpret the source text + config. Outputs `bluepr
 1. Take the scenes properties and pass it into the Veo model
 2. Include the reference_from and prompt as an attachment into the Veo's model parameter
 3. If the reference_from is a previous scene_id (indicating a continuous shot) this layer should extract the last frame of the previous scene (which is already integrated with external TTS and trimmed accordingly) and use that last frame as an attachment for the image-to-video task.
-4. Send parameter to Veo 3.1 Fast for reference-to-video task / send it to Veo 3.1 lite for image-to-video task
+4. Send every scene to Veo 3.1 Lite as an image-to-video task. The seed image is the start frame, the background (opening B-Roll), or the previous scene's last frame.
 5. For each video-with-audio scene that is successfully generated, send it to layer 6 (External TTS), receive the integrated output from layer 6 and continue the next scene. Scenes that are considered B-Roll does not need to be passed to layer 6 (External TTS)
 
 ---

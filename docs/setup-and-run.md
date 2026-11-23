@@ -399,12 +399,12 @@ curl -s -X POST $BASE/pipeline/select \
     ]
   }"
 
-# ── L4  💸 1 image per background + per storyboard ────────────────
+# ── L4  💸 1 image per background + per start frame ────────────────
 curl -s -X POST $BASE/pipeline/assets \
   -H 'Content-Type: application/json' -d "{\"run_id\":\"$RUN\"}"
 ```
 
-**Look at the PNGs before continuing** — `backgrounds/` and `storyboard/`. This is
+**Look at the PNGs before continuing** — `backgrounds/` and `start_frame/`. This is
 where character likeness drift shows up, and it's much cheaper to catch here than
 after nine Veo calls.
 

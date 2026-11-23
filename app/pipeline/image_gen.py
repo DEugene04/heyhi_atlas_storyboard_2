@@ -1,14 +1,14 @@
 """
 app/pipeline/image_gen.py — Layer 4 asset generation (OpenAI gpt-image-2).
 
-Generates backgrounds and storyboards from the resolved blueprint.
+Generates backgrounds and start frames from the resolved blueprint.
 Characters come from the shared character library and are never generated here.
 
 The blueprint style is prepended to every prompt at generation time.
 
 Assets are generated in dependency order:
 1. Backgrounds
-2. Storyboards (which reference backgrounds and character PNGs)
+2. Start frames (one per group: the character PNG placed into its background)
 
 Reference resolution:
 - Background -> run/backgrounds/<id>.png
@@ -44,12 +44,11 @@ class AssetError(RuntimeError):
 
 
 # Appended to every image prompt. The image model renders any text it can: left
-# alone it draws the panel timecodes from the storyboard template, invents
-# captions and speech bubbles, and writes signage. Veo copies all of it into the
-# video. The scene prompts already forbid text; this is the same rule one layer
+# alone it invents captions and speech bubbles, and writes signage. The video
+# model copies all of it into the clip. The scene prompts already forbid text; this is the same rule one layer
 # earlier.
 NO_TEXT_CLAUSE = (
-    "Wordless image: no captions, subtitles, speech bubbles, timecodes, panel "
+    "Wordless image: no captions, subtitles, speech bubbles, timecodes, "
     "labels, signage, logos, or any readable letters or numbers anywhere; every "
     "poster, screen, calendar, document and wall is blank or abstract."
 )
@@ -83,7 +82,7 @@ class AssetGenerator:
         self.resume = resume
         self.reused: list[Path] = []            # files skipped because they existed
         self.bg_dir = self.run / "backgrounds"  # Directory to save generate background
-        self.sb_dir = self.run / "storyboard"   # Directory to save generate storyboards
+        self.sf_dir = self.run / "start_frame"  # Directory to save generated start frames
 
     # Converts JSON into python dictionary
     def _load_blueprint(self) -> dict:
@@ -153,35 +152,35 @@ class AssetGenerator:
             out.append(self._gen(_compose_prompt(style, bg["prompt"]), [], dest))
         return out
 
-    # ---- storyboards (resolve library chars + generated bgs -> 2x2 grid) ----
-    def generate_storyboards(self, bp: dict) -> list[Path]:
+    # ---- start frames (library character + generated background -> one frame) ----
+    def generate_start_frames(self, bp: dict) -> list[Path]:
         style = bp.get("style", "")
         bg_ids = {b["id"] for b in bp.get("backgrounds", [])}
         out: list[Path] = []
-        for sb in bp.get("storyboard", []):
-            dest = self.sb_dir / f"{sb['id']}.png"
+        for sf in bp.get("start_frame", []):
+            dest = self.sf_dir / f"{sf['id']}.png"
             if self._already_done(dest):
                 out.append(dest)
                 continue
-            refs = [self._resolve_ref(r, bg_ids) for r in sb.get("reference", [])]
-            out.append(self._gen(_compose_prompt(style, sb["prompt"]), refs, dest))
+            refs = [self._resolve_ref(r, bg_ids) for r in sf.get("reference", [])]
+            out.append(self._gen(_compose_prompt(style, sf["prompt"]), refs, dest))
         return out
 
     def generate_all(self, bp: dict | None = None) -> dict[str, list[Path]]:
         """Generate all assets in dependency order.
 
-        Backgrounds are generated first because storyboards reference them.
+        Backgrounds are generated first because start frames reference them.
 
         Returns:
-            {"backgrounds": [...], "storyboard": [...]}
+            {"backgrounds": [...], "start_frame": [...]}
 
         With resume=True, existing PNGs are reused instead of regenerated.
         Raises AssetError if generation or reference resolution fails.
         """
         bp = bp if bp is not None else self._load_blueprint()
         backgrounds = self.generate_backgrounds(bp)     # FIRST — referenced below
-        storyboards = self.generate_storyboards(bp)
-        return {"backgrounds": backgrounds, "storyboard": storyboards}
+        start_frames = self.generate_start_frames(bp)
+        return {"backgrounds": backgrounds, "start_frame": start_frames}
 
 
 # ---------------------------------------------------------------- OpenAI client

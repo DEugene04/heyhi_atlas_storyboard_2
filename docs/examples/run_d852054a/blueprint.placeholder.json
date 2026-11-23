@@ -29,18 +29,20 @@
     },
     {
       "id": "scene_intro_1",
-      "task": "reference-to-video",
-      "model": "Veo 3.1 Fast",
+      "task": "image-to-video",
+      "model": "Veo 3.1 Lite",
       "text": "Welcome to TechNova Solutions. This manual provides employees with a clear understanding of our company's expectations.",
-      "prompt": "Cinematography: Medium shot, framing char_HR_rep from the waist up, with a slightly low angle,\nSubject: char_HR_rep, a professional-looking individual, standing confidently,\nAction: The char_HR_rep gestures welcomingly with one hand, then brings both hands together in a reassuring manner, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip. Do not display the storyboard grid at the start of the clip; begin animation directly from Panel 1 as depicted in the reference.,\nContext: In a modern office environment, with a blurred background of desks and office equipment,\nStyle and Ambience: Professional and friendly, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background,\nAmbient noise: Gentle office background sounds,\nLanguage: english",
+      "prompt": "Cinematography: Medium shot, framing char_HR_rep from the waist up, with a slightly low angle,\nSubject: char_HR_rep, a professional-looking individual, standing confidently,\nAction: The char_HR_rep gestures welcomingly with one hand, then brings both hands together in a reassuring manner, the character's lips and jaw move continuously as if speaking, articulating dialogue that will be overlaid separately in post-production; the visual lip-sync animation is sustained throughout the entire clip.,\nContext: In a modern office environment, with a blurred background of desks and office equipment,\nStyle and Ambience: Professional and friendly, wordless illustration; all surfaces smooth and blank; no signage, writing, labels, or numerical characters visible on any object, wall, or background,\nAmbient noise: Gentle office background sounds,\nLanguage: english",
       "safety": "Allow (Adult only)",
-      "reference_from": "storyboard:sb_intro",
+      "reference_from": "start_frame:sf_intro",
       "type": "video-with-audio",
       "broll_role": null,
-      "length": null,
+      "length": 6.0,
       "aspect_ratio": "16:9",
       "topic": "Introduction & Purpose",
-      "characters": ["char_HR_rep"],
+      "characters": [
+        "char_HR_rep"
+      ],
       "audios": [
         {
           "char_id": "char_HR_rep",
@@ -49,12 +51,14 @@
       ]
     }
   ],
-  "storyboard": [
+  "start_frame": [
     {
-      "id": "sb_intro",
-      "model": "gemini-2.5-flash-image",
-      "prompt": "A 2x2 multipanel storyboard grid, showing four sequential moments from an 8-second scene as a comic strip.\nPanel 1 (top-left, 00:00-00:02): in the foreground, char_HR_rep stands with a welcoming posture, hands open; in the background, a modern office environment with blurred desks.\nPanel 2 (top-right, 00:02-00:04): char_HR_rep smiles warmly, making a gentle hand gesture towards the viewer.\nPanel 3 (bottom-left, 00:04-00:06): char_HR_rep brings both hands together in a reassuring manner, maintaining eye contact.\nPanel 4 (bottom-right, 00:06-00:08): char_HR_rep holds a confident and approachable pose, with a slight head tilt. Character design and wardrobe identical across panels. Clean black panel borders. 16:9 format.",
-      "reference": ["char_HR_rep", "bg_office"]
+      "id": "sf_intro",
+      "prompt": "char_HR_rep stands in the center of the frame, facing the camera, upper body and head fully visible, hands relaxed at their sides, set into the environment shown in the background reference. Medium shot at eye level, the character fills about half the frame height. Character design and wardrobe exactly as in the character reference; environment, lighting and colors exactly as in the background reference. 16:9 format.",
+      "reference": [
+        "char_HR_rep",
+        "bg_office"
+      ]
     }
   ]
 }

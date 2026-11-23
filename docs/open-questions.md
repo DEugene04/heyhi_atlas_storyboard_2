@@ -37,7 +37,7 @@ back when there is something in it.
 [20](#20-on-hold--subtitles-and-audio-can-disagree-on-the-elevenlabs-path) ·
 [21](#21-on-hold--music-is-mixed-at-a-fixed-level-with-no-ducking) ·
 [26](#26-on-hold--env-carries-keys-nothing-reads) ·
-[27](#27-on-hold--would-a-single-composed-reference-image-replace-the-storyboard) — **the costed answer to "can video be cheaper"**
+[27](#27-fixed--a-single-composed-start-frame-replaced-the-storyboard) — **superseded: built as start frames, see FIXED below**
 
 **Partly closed, remainder named (4):**
 [5](#5-partly-fixed--schema-drift) ·
@@ -273,13 +273,29 @@ script synthesis, visual-slide selection, and visual crop analysis. It deliberat
 `OPENAI_API_KEY` variable; the legacy `HEYHI_OPENAI_API_KEY` statement above
 remains true. The original eight-layer pipeline is unchanged.
 
-## 27. ON HOLD — would a single composed reference image replace the storyboard?
+## 27. FIXED — a single composed start frame replaced the storyboard
+
+**Fixed 2026-11-23 (Studio pipeline).** The storyboard is gone. Each *group* (the
+scenes between two B-Rolls, which now carry exactly one character) gets one
+`start_frame`: the character composited into a background, generated at L4 from
+`reference: [char_id, bg_id]`. The group's first scene starts from it
+(`start_frame:<id>`); later scenes chain from the previous clip's last frame. Every
+scene is `image-to-video` on Veo 3.1 Lite — `ROUTE_BY_PREFIX` lost its Fast
+branch, and `reference-to-video` is no longer used by the Studio pipeline. The
+reason was the video model (MiniMax H3) coping badly with multi-character shots and
+object interaction, not cost. The same change added one character per group, simple
+to-camera performances, and `length` filled from each scene's word count.
+The text below is the original proposal, kept as history.
 
 **Decision 2026-08-02: not changing the winning team.** Output quality is
 accepted today and there is no cost pressure, so this stays a costed proposal
 rather than a change.
 
-> **Un-park it the moment anyone above asks whether video generation can be made
+**Decision 2026-08-02: not changing the winning team.** Output quality is
+accepted today and there is no cost pressure, so this stays a costed proposal
+rather than a change.
+
+> *(Historical — superseded by the fix above.)* **Un-park it the moment anyone above asks whether video generation can be made
 > cheaper.** This is the answer to that question, it is already measured, and the
 > experiment that de-risks it costs $0.40. Do not re-derive any of it — the
 > numbers below are ready to present.
@@ -1540,6 +1556,8 @@ Pinned by 4 tests in `tests/test_director_validation.py`.
 
 ## 15. DECIDED — character consistency is good enough, and the storyboard is really a reference panel
 
+> **Update 2026-11-23:** the storyboard no longer exists; see [27](#27-fixed--a-single-composed-start-frame-replaced-the-storyboard). The chain below is now library PNG → start frame → clip.
+
 **Decision 2026-08-02: not investigating. Output quality is accepted by the
 manager.** Recorded because the mechanism is worth understanding when something
 does eventually drift.
@@ -1566,7 +1584,7 @@ wardrobe and general composition — and ignores the temporal structure. So the
 storyboard earns its keep as a likeness carrier, not as a storyboard.
 
 That reframing is what makes
-[27](#27-on-hold--would-a-single-composed-reference-image-replace-the-storyboard)
+[27](#27-fixed--a-single-composed-start-frame-replaced-the-storyboard)
 worth asking: if the grid is only ever used as a reference panel, a single
 composed image might do the same job for less money. That is tracked separately.
 

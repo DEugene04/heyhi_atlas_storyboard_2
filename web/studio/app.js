@@ -9,7 +9,7 @@ const STEPS = [
   { n: 1, title: "Config & source", sub: "Create a run" },
   { n: 2, title: "Director", sub: "Blueprint" },
   { n: 3, title: "Cast", sub: "Characters & voices" },
-  { n: 4, title: "Assets", sub: "Backgrounds & storyboards" },
+  { n: 4, title: "Assets", sub: "Backgrounds & start frames" },
   { n: 5, title: "Scenes", sub: "Video + voice" },
   { n: 6, title: "Music", sub: "Background bed" },
   { n: 7, title: "Render", sub: "Final video" },
@@ -399,8 +399,8 @@ function renderAssets() {
   const el = $("#stage4"), s = state.status;
   if (!unlocked(4)) return locked(el, 4, "Save the character and voice selection first.");
   const bp = state.blueprint, have = s.backgrounds > 0;
-  const kids = [head(4, "Assets", "GPT Image 2 paints the backgrounds and the 2×2 storyboards that Veo uses as references.",
-    { cls: have ? "ok" : "", text: have ? `${s.backgrounds} backgrounds · ${s.storyboards} storyboards` : "Not generated" })];
+  const kids = [head(4, "Assets", "GPT Image 2 paints the backgrounds and one start frame per group — the character placed into its background.",
+    { cls: have ? "ok" : "", text: have ? `${s.backgrounds} backgrounds · ${s.start_frames} start frames` : "Not generated" })];
 
   kids.push(h("div", { class: "approval-bar" }, spendHint("GPT Image 2"), h("div", { class: "actions" },
     have
@@ -411,7 +411,7 @@ function renderAssets() {
 
   if (have) {
     kids.push(h("div", { class: "panel" }, h("h3", {}, "Backgrounds"), gallery("backgrounds", bp.backgrounds.map(b => b.id))));
-    kids.push(h("div", { class: "panel" }, h("h3", {}, "Storyboards"), gallery("storyboard", bp.storyboard.map(b => b.id))));
+    kids.push(h("div", { class: "panel" }, h("h3", {}, "Start frames"), gallery("start_frame", bp.start_frame.map(b => b.id))));
   }
   el.replaceChildren(...kids);
 }
@@ -423,8 +423,8 @@ function gallery(dir, ids) {
 }
 
 async function genAssets(mode) {
-  if (mode === "force" && !await confirmAction("Regenerate ALL backgrounds and storyboards? This spends credits again.", "Regenerate")) return;
-  return run("Generating assets", "Painting backgrounds and storyboards…", async () => {
+  if (mode === "force" && !await confirmAction("Regenerate ALL backgrounds and start frames? This spends credits again.", "Regenerate")) return;
+  return run("Generating assets", "Painting backgrounds and start frames…", async () => {
     await post("/assets", { run_id: state.runId, force: mode === "force", resume: mode === "resume" });
     state.bust = Date.now();
     notice("Assets generated.");

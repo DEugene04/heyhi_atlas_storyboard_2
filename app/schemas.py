@@ -3,7 +3,7 @@ app/schemas.py — Layer 1 request and blueprint schemas.
 
 This file defines both pipeline contracts:
 
-  • Blueprint models (VideoBlueprint, Scene, Storyboard, ...) describe
+  • Blueprint models (VideoBlueprint, Scene, StartFrame, ...) describe
     blueprint.json, the artifact shared by every layer after the director.
     Changing them changes both what the director may emit and what existing
     blueprints validate against.
@@ -32,25 +32,25 @@ class BackgroundRef(BaseModel):
     )
 
 
-class Storyboard(BaseModel):
-    # REMOVED 2026-08-03: `model` (defaulted to "gemini-2.5-flash-image"). It was
-    # never read — GeminiImageClient hard-codes its own model — so it looked like
-    # a per-storyboard setting that did nothing. Blueprints on disk still carry
-    # it; pydantic drops unknown keys, so old runs parse unchanged.
-    id: str = Field(..., description="short unique storyboard id, e.g. 'sb_1'")
+class StartFrame(BaseModel):
+    """The first frame of a group: its one character placed into a background.
+
+    One per group (the scenes between two B-Rolls). The group's first scene starts
+    from it; later scenes of the group chain from the previous clip's last frame."""
+    id: str = Field(..., description="short unique start-frame id, e.g. 'sf_1'")
     prompt: str = Field(
         ...,
         description=(
-            "2x2 multipanel storyboard prompt with per-panel timecodes "
-            "[00:00-00:02] .. [00:06-00:08]"
+            "single-frame image prompt: the group's character centered and "
+            "facing the camera inside the referenced background"
         ),
     )
     reference: list[str] = Field(
         default_factory=list,
         description=(
-            "placeholder char_ids (from scene.characters) + bg_ids used to "
-            "compose this keyframe. char_ids are opaque tokens the user "
-            "resolves to real library characters."
+            "exactly two ids: the group's placeholder char_id (from "
+            "scene.characters), then one bg_id. The char_id is an opaque token "
+            "the user resolves to a real library character."
         ),
     )
 
@@ -93,10 +93,10 @@ StyleType = Literal["realism", "cartoon", "semi-realism"]
 # Add objective literal (popular use cases)
 AspectRatio = Literal["16:9", "9:16"]
 
-# reference_from determines both task and model. scene_gen re-validates the
-# pairing before generation.
-VeoTask = Literal["image-to-video", "reference-to-video"]
-VeoModel = Literal["Veo 3.1 Fast", "Veo 3.1 Lite"]
+# Every scene is image-to-video on the Lite model; reference_from only picks the
+# seed image. scene_gen re-validates the pairing before generation.
+VeoTask = Literal["image-to-video"]
+VeoModel = Literal["Veo 3.1 Lite"]
 
 # Selects blueprint behavior. Currently only "opening" and "summary" are
 # implemented.
@@ -115,16 +115,13 @@ class Scene(BaseModel):
     task: VeoTask = Field(
         ...,
         description=(
-            "'reference-to-video' when reference_from is 'storyboard:...', "
-            "'image-to-video' when reference_from is a "
-            "prior scene id. Enforced by validator."
+            "always 'image-to-video'. Enforced by validator."
         ),
     )
     model: VeoModel = Field(
         ...,
         description=(
-            "'Veo 3.1 Fast' pairs with reference-to-video. 'Veo 3.1 Lite' "
-            "pairs with image-to-video."
+            "always 'Veo 3.1 Lite'."
         ),
     )
     # Mentioning config.language here is intentional: response_schema passes Field
@@ -140,7 +137,7 @@ class Scene(BaseModel):
         ),
     )
     # KNOWN GAP: patch_blueprint rewrites placeholder char_ids in `characters`,
-    # `audios` and storyboard references — but NOT inside this prompt string. If
+    # `audios` and start_frame references — but NOT inside this prompt string. If
     # the director writes a placeholder id into the prompt text (it sometimes
     # does, e.g. "a medium shot of char_narrator"), that raw token is what Veo
     # receives. See docs/open-questions.md.
@@ -157,7 +154,7 @@ class Scene(BaseModel):
     reference_from: str = Field(
         ...,
         description=(
-            "one of: 'storyboard:<sb_id>', "
+            "one of: 'start_frame:<sf_id>', 'background:<bg_id>', "
             "'scene:<earlier_scene_id>', or bare '<earlier_scene_id>'"
         ),
     )
@@ -165,7 +162,11 @@ class Scene(BaseModel):
     broll_role: BRollRole | None = None
     length: float | None = Field(
         None,
-        description="seconds; REQUIRED for B-Roll, null for video-with-audio",
+        description=(
+            "seconds; REQUIRED for B-Roll. video-with-audio: the director "
+            "leaves it null and director.fill_speaking_lengths overwrites it "
+            "from the scene's word count"
+        ),
     )
     aspect_ratio: AspectRatio = "16:9"
     topic: str | None = Field(
@@ -175,8 +176,9 @@ class Scene(BaseModel):
     characters: list[str] = Field(
         default_factory=list,
         description=(
-            "placeholder char_ids present in this scene (e.g. "
-            "['char_teacher', 'char_student']). Semantic role-based ids."
+            "video-with-audio: exactly one placeholder char_id (e.g. "
+            "['char_teacher']), the same for every scene of its group. "
+            "B-Roll: []. Semantic role-based ids."
         ),
     )
     audios: list[AudioMapping] = Field(
@@ -219,7 +221,7 @@ class VideoBlueprint(BaseModel):
     )
     backgrounds: list[BackgroundRef]
     scenes: list[Scene]
-    storyboard: list[Storyboard]
+    start_frame: list[StartFrame]
 
 class ConfigIn(BaseModel):
     # extra="forbid": unknown/typo'd fields -> 422 instead of silent drop
@@ -302,7 +304,7 @@ class AssetsOut(BaseModel):
     run_id: str
     assets_dir: str
     backgrounds: int
-    storyboard: int
+    start_frame: int
     reused: int = 0                                   # existing PNGs left untouched
 
 class ScenesIn(BaseModel):
@@ -316,9 +318,6 @@ class ScenesIn(BaseModel):
     scene_id: str | None = None
     tts_provider: Literal["azure", "elevenlabs"] = "elevenlabs"
     video_provider: Literal["minimax_h3", "gemini"] = "minimax_h3"   # gemini = legacy Veo
-    # H3 only. File names inside the shared _storage/image_library and video_library.
-    background: str = ""
-    reference_video: str = ""
     seed: int | None = Field(None, ge=0, lt=2**31)
     turbo: bool | None = None     # H3 only: True = turbo LoRA (4 steps); None = ATLAS_H3_TURBO default
     # Provides word timings for subtitles. Gemini is billed per scene; Whisper runs

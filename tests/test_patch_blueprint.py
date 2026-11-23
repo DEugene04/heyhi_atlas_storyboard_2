@@ -33,16 +33,16 @@ def test_selection_rewrites_characters_and_audios(bp_dict, selections):
             assert a["audio_id"] in ph_to_audio.values()
 
 
-def test_selection_rewrites_storyboard_char_refs_but_keeps_bg_refs(bp_dict, selections):
-    """storyboard.reference mixes char_ids and bg_ids. The rewrite is
+def test_selection_rewrites_start_frame_char_refs_but_keeps_bg_refs(bp_dict, selections):
+    """start_frame.reference mixes char_ids and bg_ids. The rewrite is
     `.get(r, r)`, so anything that is not a known placeholder passes through —
     which is how background ids survive without needing a second lookup."""
     bg_ids = {b["id"] for b in bp_dict["backgrounds"]}
     patched, _ = apply_selection(bp_dict, selections)
     resolved = {s["char_id"] for s in selections}
 
-    for sb in patched["storyboard"]:
-        for ref in sb["reference"]:
+    for sf in patched["start_frame"]:
+        for ref in sf["reference"]:
             assert ref in resolved or ref in bg_ids
 
 
@@ -131,7 +131,7 @@ def test_collapsing_two_roles_onto_one_character_is_rejected(bp_dict, selections
 def test_prompt_prose_is_not_rewritten(bp_dict, selections):
     """DOCUMENTS THE BUG (open-questions #1), does not assert desired behaviour.
 
-    apply_selection rewrites ids in characters / audios / storyboard.reference
+    apply_selection rewrites ids in characters / audios / start_frame.reference
     but never in prompt text. When the director wrote a placeholder into prose,
     the raw token reaches Veo. Measured across all three committed examples,
     this happens in most speaking scenes of every run.

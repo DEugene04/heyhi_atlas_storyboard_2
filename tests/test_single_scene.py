@@ -17,7 +17,7 @@ from app.pipeline.scene_gen import (
 )
 
 BP = {"scenes": [
-    {"id": "s1", "type": "video-with-audio", "text": "hello", "reference_from": "storyboard:sb1"},
+    {"id": "s1", "type": "video-with-audio", "text": "hello", "reference_from": "start_frame:sf1"},
     {"id": "s2", "type": "B-Roll", "length": 2.0, "reference_from": "scene:s1"},
     {"id": "s3", "type": "B-Roll", "length": 2.0, "reference_from": "scene:s2"},
     {"id": "s4", "type": "B-Roll", "length": 2.0, "reference_from": "background:bg1"},
