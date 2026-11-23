@@ -15,6 +15,10 @@ const STEPS = [
   { n: 7, title: "Render", sub: "Final video" },
 ];
 
+// Extra director attempts after a blueprint fails validation (0-5; the server rejects more).
+// Each attempt is another paid Gemini call, so this is the cap on spend when a source is awkward.
+const DIRECTOR_MAX_RETRIES = 3;
+
 const state = {
   runId: null,
   status: null,
@@ -291,7 +295,7 @@ const metric = (label, value) => h("div", {}, h("span", {}, label), h("strong", 
 async function generateBlueprint(force) {
   if (force && !await confirmAction("Regenerate the blueprint?\n\nThis spends credits and DELETES your character/voice selection for this run. Generated assets are not removed but may no longer match.", "Regenerate")) return;
   return run("Directing", "GPT-4o is writing the blueprint (can take a minute).", async () => {
-    await post("/direct", { run_id: state.runId, force });
+    await post("/direct", { run_id: state.runId, force, max_retries: DIRECTOR_MAX_RETRIES });
     state.cast = {};
     notice("Blueprint generated.");
   });
