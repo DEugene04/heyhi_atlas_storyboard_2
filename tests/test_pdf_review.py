@@ -5,6 +5,7 @@ No OpenAI, Gemini, Kie, S3, or video call is made here.
 from __future__ import annotations
 
 import io
+import json
 from types import SimpleNamespace
 
 import pymupdf
@@ -384,8 +385,85 @@ def test_openai_script_visual_selection_and_crop_use_structured_responses(tmp_pa
     assert image_input["detail"] == "high"
 
 
-def test_scene_prompt_tags_references_as_documented_pictures():
-    from app.pdf_review import _scene_prompt
-    both = _scene_prompt("hi", True, True)
-    assert "<Picture 1>" in both and "<Picture 2>" in both and "Image 1" not in both
-    assert "<Picture 1>" in _scene_prompt("hi", False, True)
+def test_scene_prompt_describes_action_not_the_frame_contents():
+    from app.utils.presenter_prompt import first_frame_scene_prompt
+    p = first_frame_scene_prompt('Say "hello".')
+    assert "<d>[en] Say 'hello'.</d>" in p            # speech in tags, quotes neutralised
+    assert "<Picture" not in p                        # no reference images in first-frame mode
+    assert "green rectangle" in p and "first frame" in p
+    assert "<d>" not in first_frame_scene_prompt("")  # no narration -> no speech tag
+
+
+def _project_with_character(tmp_path, monkeypatch):
+    from PIL import Image
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    client = TestClient(app)
+    pid = client.post(
+        "/pdf-review/import-file?target_seconds=75&language=English",
+        files={"file": ("t.pdf", io.BytesIO(_pdf_bytes()), "application/pdf")},
+    ).json()["project_id"]
+    project = tmp_path / pid
+    (project / "characters").mkdir()
+    char = Image.new("RGBA", (120, 300), (0, 0, 0, 0))
+    char.paste((200, 60, 40, 255), (15, 20, 105, 300))
+    char.save(project / "characters/generated_character.png")
+    data = json.loads((project / "project.json").read_text())
+    data["character_path"] = "characters/generated_character.png"
+    (project / "project.json").write_text(json.dumps(data))
+    return client, pid, project
+
+
+def _write_png(path, size, color):
+    from PIL import Image
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", size, color).save(path)
+
+
+def test_start_frame_needs_a_background_then_builds(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    assert client.post("/pdf-review/compose-start-frame", json={"project_id": pid}).status_code == 409
+
+    _write_png(project / "backgrounds/generated_background.png", (640, 360), (150, 110, 90))
+    r = client.post("/pdf-review/compose-start-frame", json={"project_id": pid})
+    assert r.status_code == 200, r.text
+    assert (project / r.json()["start_frame_path"]).is_file()
+    assert (project / review.START_FRAME_BACKGROUND).is_file()      # exact pixels kept for compositing
+    assert client.get(r.json()["start_frame_url"]).status_code == 200
+
+
+def test_start_frame_can_use_an_image_library_background(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    lib = tmp_path / "library"
+    monkeypatch.setattr(review, "IMAGE_LIBRARY_ROOT", lib.resolve())
+    _write_png(lib / "background9.png", (640, 360), (100, 120, 160))
+
+    r = client.post("/pdf-review/compose-start-frame",
+                    json={"project_id": pid, "background": "background9.png"})
+    assert r.status_code == 200, r.text
+    assert json.loads((project / "project.json").read_text())["start_frame_background"] == "background9.png"
+    missing = client.post("/pdf-review/compose-start-frame",
+                          json={"project_id": pid, "background": "nope.png"})
+    assert missing.status_code == 404
+
+
+def test_scene_generation_starts_from_the_start_frame(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    body = {"project_id": pid, "scene_id": "s1", "narration": "hi"}
+    assert client.post("/pdf-review/generate-scene", json=body).status_code == 409   # no frame yet
+
+    _write_png(project / "backgrounds/generated_background.png", (640, 360), (150, 110, 90))
+    assert client.post("/pdf-review/compose-start-frame", json={"project_id": pid}).status_code == 200
+
+    seen = {}
+
+    class FakeH3:
+        def generate(self, prompt, image_paths, **kw):
+            seen.update(prompt=prompt, images=image_paths, **kw)
+            raise review.requests.RequestException("stop here")
+
+    import app.clients.video_minimax_h3_client as h3
+    monkeypatch.setattr(h3, "MinimaxH3Client", FakeH3)
+    assert client.post("/pdf-review/generate-scene", json=body).status_code == 502
+    assert seen["first_frame"] == project / "start_frames/start_frame.png"
+    assert seen["images"] == []                    # first-frame mode excludes reference images
+    assert "<d>[en] hi</d>" in seen["prompt"]

@@ -158,6 +158,25 @@
             </div>
           </div>
         </div>
+        <div class="panel character-gen-panel">
+          <h4>Background &amp; starting frame</h4>
+          <p class="hint">A background is generated from the script. The starting frame places the approved character on the left of the background with a flat green rectangle on the right, built from the exact character and background pixels (no re-drawing). Every scene video starts from this frame, so build it before generating videos.</p>
+          <div class="frame-previews">
+            <figure><div class="frame-box"><span id="backgroundPlaceholder">Background appears here</span><img id="backgroundPreviewImg" class="hidden" alt="Generated background"></div><figcaption>Background</figcaption></figure>
+            <figure><div class="frame-box"><span id="startFramePlaceholder">Starting frame appears here</span><img id="startFramePreviewImg" class="hidden" alt="Starting frame"></div><figcaption>Starting frame <small id="startFrameInfo"></small></figcaption></figure>
+          </div>
+          <p id="backgroundPromptText" class="character-prompt-text hidden"></p>
+          <div class="character-gen-actions">
+            <button id="generateBackground" class="button primary">Generate background from script</button>
+          </div>
+          <div class="field start-frame-source">
+            <label for="backgroundSelect">Starting-frame background <em>the generated one, or a file from the shared image library</em></label>
+            <select id="backgroundSelect"><option value="">Generated background (this project)</option></select>
+          </div>
+          <div class="character-gen-actions">
+            <button id="buildStartFrame" class="button secondary" disabled>Build starting frame</button>
+          </div>
+        </div>
         <div class="approval-bar">
           <label><input id="approveCharacter" type="checkbox"> Character is approved</label>
           <button id="toPreflightFromChar" class="button primary" disabled>Continue to preflight <span>&rarr;</span></button>
@@ -195,8 +214,6 @@
             <button id="generateAll" class="button primary">Generate all scenes</button>
           </div>
           <div class="field"><label for="turboToggle"><input id="turboToggle" type="checkbox"> Turbo mode <em>4 steps + speed LoRA · faster, A/B against normal</em></label></div>
-          <div class="field"><label for="backgroundSelect">Background reference <em>optional · from the shared image library</em></label><select id="backgroundSelect"><option value="">None</option></select></div>
-          <div class="field"><label for="referenceVideoSelect">Reference video <em>optional · from the shared video library · slows each clip</em></label><select id="referenceVideoSelect"><option value="">None</option></select></div>
           <div id="genStatus" class="gen-status"></div>
           <div id="genList" class="gen-list"></div>
         </div>

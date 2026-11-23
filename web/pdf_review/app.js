@@ -100,6 +100,7 @@ async function importSource(mode) {
     state.cropResults.clear();
     state.videos.clear();
     renderSource();
+    resetBackgroundPanel();
     await maybeUploadCharacter(data.project_id);
     notice(`${data.page_count} slides extracted. Review the recommended scope before continuing.`);
   } catch (error) {
@@ -503,6 +504,7 @@ function showCharacterPreview(url, prompt, credits) {
   $("#characterGenStatus").textContent = "Generated · review required";
   $("#approveCharacter").checked = false;
   syncCharacterApproval();
+  syncStartFrameButton();
 }
 
 function syncCharacterApproval() {
@@ -510,6 +512,54 @@ function syncCharacterApproval() {
   $("#toPreflightFromChar").disabled = !$("#approveCharacter").checked || !hasImage;
 }
 
+// --- Step 05: Background + starting frame ---
+
+function showImage(imgSel, placeholderSel, url) {
+  const img = $(imgSel);
+  img.src = `${url}?v=${Date.now()}`;   // bust the cache: the file name is reused on regenerate
+  img.classList.remove("hidden");
+  $(placeholderSel).classList.add("hidden");
+}
+
+// Needs a character, and either a library background chosen or a generated one.
+function syncStartFrameButton() {
+  const hasCharacter = Boolean(state.project?.character_path);
+  const hasGenerated = !$("#backgroundPreviewImg").classList.contains("hidden");
+  $("#buildStartFrame").disabled = !(hasCharacter && (hasGenerated || $("#backgroundSelect").value));
+}
+
+async function generateBackgroundFromScript() {
+  showBusy("Generating background", "OpenAI picks a setting from the script, then kie.ai renders it. This may take a minute.");
+  try {
+    const data = await jsonPost("/generate-background", { project_id: state.project.project_id });
+    showImage("#backgroundPreviewImg", "#backgroundPlaceholder", data.background_url);
+    $("#backgroundPromptText").textContent = `Prompt: ${data.background_prompt}`;
+    $("#backgroundPromptText").classList.remove("hidden");
+    // A new background makes any earlier starting frame stale.
+    $("#startFramePreviewImg").classList.add("hidden");
+    $("#startFramePlaceholder").classList.remove("hidden");
+    $("#startFrameInfo").textContent = "";
+    syncStartFrameButton();
+    notice(`Background generated (${data.credits_consumed ?? "?"} credits). Build the starting frame next.`);
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+}
+
+async function buildStartFrame() {
+  showBusy("Building starting frame", "Cutting out the character and compositing it onto the background. No image model is used.");
+  try {
+    const data = await jsonPost("/compose-start-frame", {
+      project_id: state.project.project_id,
+      background: $("#backgroundSelect").value,   // "" = the generated background
+    });
+    showImage("#startFramePreviewImg", "#startFramePlaceholder", data.start_frame_url);
+    $("#startFrameInfo").textContent = `· ${data.size[0]}×${data.size[1]} · green panel ${data.panel.w}×${data.panel.h}`;
+    notice("Starting frame built and verified.");
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+}
+
+$("#generateBackground").addEventListener("click", generateBackgroundFromScript);
+$("#buildStartFrame").addEventListener("click", buildStartFrame);
+$("#backgroundSelect").addEventListener("change", syncStartFrameButton);
 $("#generateCharacter").addEventListener("click", generateCharacterFromScript);
 $("#regenerateCharacter").addEventListener("click", regenerateCharacterWithPrompt);
 $("#characterRegenPrompt").addEventListener("keydown", event => { if (event.key === "Enter") regenerateCharacterWithPrompt(); });
@@ -568,7 +618,7 @@ function videoContract() {
 
 async function generateOne(scene) {
   const contract = videoContract();
-  showBusy(`Generating scene ${scene.id}`, "MiniMax H3 job — generating with green-screen, then compositing the slide. This can take several minutes.");
+  showBusy(`Generating scene ${scene.id}`, "MiniMax H3 job — generating from the starting frame, then compositing the slide. This can take several minutes.");
   try {
     const data = await jsonPost("/generate-scene", {
       project_id: state.project.project_id,
@@ -578,8 +628,6 @@ async function generateOne(scene) {
       crop_path: scene.crop_path || "",
       duration_s: contract.duration_s,
       aspect_ratio: contract.aspect_ratio,
-      background: $("#backgroundSelect").value,
-      reference_video: $("#referenceVideoSelect").value,
       turbo: $("#turboToggle").checked,
     });
     state.videos.set(scene.id, { url: data.url, task: data.task, jobId: data.job_id, composited: data.composited,
@@ -593,15 +641,30 @@ async function generateOne(scene) {
   } finally { hideBusy(); }
 }
 
-api("/backgrounds").then((d) => {
+// Image-library backgrounds; the first option ("") is the project's generated background.
+async function loadBackgroundOptions() {
   const select = $("#backgroundSelect");
+  const keep = select.value;
+  const d = await api("/backgrounds");
+  select.length = 1;
   for (const name of d.backgrounds) select.add(new Option(name, name));
-}).catch(() => {});
+  select.value = [...select.options].some(o => o.value === keep) ? keep : "";
+  syncStartFrameButton();
+}
+// A freshly imported project has no background or starting frame yet.
+function resetBackgroundPanel() {
+  for (const [img, ph] of [["#backgroundPreviewImg", "#backgroundPlaceholder"], ["#startFramePreviewImg", "#startFramePlaceholder"]]) {
+    $(img).classList.add("hidden");
+    $(ph).classList.remove("hidden");
+  }
+  $("#backgroundPromptText").classList.add("hidden");
+  $("#startFrameInfo").textContent = "";
+  syncStartFrameButton();
+  loadBackgroundOptions().catch(() => {});
+}
+loadBackgroundOptions().catch(() => {});
 
-api("/reference-videos").then((d) => {
-  const select = $("#referenceVideoSelect");
-  for (const name of d.reference_videos) select.add(new Option(name, name));
-}).catch(() => {});
+
 
 $("#generateAll").addEventListener("click", async () => {
   const total = state.scenes.length;

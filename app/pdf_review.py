@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.utils.io_utils import atomic_write_text
+from app.utils.presenter_prompt import first_frame_scene_prompt
 
 load_dotenv()
 
@@ -39,10 +40,6 @@ PROJECT_ROOT = Path(
 # Shared reference images (backgrounds etc.), independent of any project.
 IMAGE_LIBRARY_ROOT = Path(
     os.environ.get("ATLAS_IMAGE_LIBRARY_ROOT", "_storage/image_library")
-).resolve()
-
-VIDEO_LIBRARY_ROOT = Path(
-    os.environ.get("ATLAS_VIDEO_LIBRARY_ROOT", "_storage/video_library")
 ).resolve()
 
 MAX_PDF_BYTES = 100 * 1024 * 1024
@@ -167,6 +164,15 @@ class RegenerateCharacterIn(BaseModel):
     prompt: str
 
 
+class GenerateBackgroundIn(BaseModel):
+    project_id: str
+
+
+class StartFrameIn(BaseModel):
+    project_id: str
+    background: str = ""   # "" = this project's generated background, else an image-library file name
+
+
 class GenerateSceneIn(BaseModel):
     project_id: str
     scene_id: str
@@ -175,8 +181,6 @@ class GenerateSceneIn(BaseModel):
     crop_path: str = ""
     duration_s: int = Field(8, ge=4, le=15)
     aspect_ratio: str = "16:9"
-    reference_video: str = ""   # file name in the shared video library
-    background: str = ""   # file name in the shared image library (not a project file)
     seed: int | None = Field(None, ge=0, lt=2**31)   # None = random; logged either way
     turbo: bool | None = None   # True = turbo LoRA (4 steps); None = ATLAS_H3_TURBO default
 
@@ -540,26 +544,20 @@ async def import_character(
     }
 
 
+def _project_background(project: Path) -> Path | None:
+    path = project / "backgrounds" / "generated_background.png"
+    return path if path.is_file() else None
+
+
 @router.get("/backgrounds")
 def list_backgrounds() -> dict[str, Any]:
-    """Image-library files that can be sent to the video model as a background reference."""
+    """Image-library files that can be used as the start frame's background."""
     names = sorted(
         p.name for p in IMAGE_LIBRARY_ROOT.glob("*")
         if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
         and p.stem.lower().startswith("background")
     ) if IMAGE_LIBRARY_ROOT.is_dir() else []
     return {"backgrounds": names}
-
-
-@router.get("/reference-videos")
-def list_reference_videos() -> dict[str, Any]:
-    """Video-library files that can be sent to the video model as a reference video."""
-    names = sorted(
-        p.name for p in VIDEO_LIBRARY_ROOT.glob("*")
-        if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".webm", ".mkv"}
-        and p.stem.lower().startswith("reference")
-    ) if VIDEO_LIBRARY_ROOT.is_dir() else []
-    return {"reference_videos": names}
 
 
 @router.post("/draft-local")
@@ -1337,60 +1335,164 @@ def regenerate_character(body: RegenerateCharacterIn) -> dict[str, Any]:
     }
 
 
-def _scene_prompt(narration: str, has_character: bool, has_background: bool = False) -> str:
-    """Assemble the green-screen scene prompt for MiniMax H3.
+START_FRAME_BACKGROUND = "start_frames/background.png"
+BACKGROUND_ASPECT = "16:9"   # the start frame is landscape: presenter left, panel right
 
-    References are tagged `<Picture N>` in request order (the server's documented
-    form), so the character is <Picture 1> and the optional background follows.
 
-    H3 has no negative-prompt branch, so every constraint is phrased as what
-    must appear. Speech goes in <d> tags with a speaker id; the slide is
-    composited later over the chroma-key panel.
+@router.post("/generate-background")
+def generate_background(body: GenerateBackgroundIn) -> dict[str, Any]:
+    """Generate an empty room that suits the approved script, via kie.ai.
+
+    OpenAI turns the script into a setting description; kie.ai renders it as a
+    16:9 plate with no people and no text. The plate is later used unmodified as
+    the canvas of the start frame (see compose_start_frame).
     """
-    presenter = (
-        "The presenter from <Picture 1>, with exactly that face, hair, clothing and build"
-        if has_character
-        else "A single corporate presenter"
+    project, data = _load_project(body.project_id)
+    script = _load_script(project)
+    sections = script.get("sections", [])
+    if not sections:
+        raise HTTPException(409, "script has no sections")
+
+    narration_text = "\n".join(
+        f"- {s.get('heading', '')}: {s.get('narration', '')}" for s in sections
     )
-    spoken = (narration or "").strip().replace('"', "'")
-    scene = (
-        f"[Shot 1] A locked, static, eye-level medium-wide shot, one continuous take. "
-        f"{presenter} stands in the left third of the frame, angled slightly toward the right, "
-        "gesturing calmly toward a large flat rectangular panel that fills the right side of "
-        "the frame. The panel is one perfectly even, bright chroma-key green, like a green "
-        "screen: a flat on-screen rectangle with crisp straight edges, empty and "
-        "unchanging for the whole clip, never overlapped by the presenter. The presenter "
-        "glances at the panel and back to camera with subtle, relaxed body movement."
-    )
-    if spoken:
-        scene += (
-            " (S1) The presenter speaks to camera in calm, clear, professional English with "
-            f"natural lip-sync: <d>[en] {spoken}</d> After the line ends, the lips stay closed."
+    prompt = f"""You are choosing the setting for a single corporate training video in which one
+presenter stands and speaks to camera. Read the script narration below and describe the ONE
+empty interior or environment that suits its subject and tone (an office, a plant floor, a
+lab, a training room, a lobby, and so on).
+
+Requirements for the description:
+- an empty environment: no people, no animals, no text, no logos, no signage, no screens,
+  no whiteboards, no posters, no documents, and no readable letters or numbers anywhere
+- wide 16:9 landscape composition, camera at eye level, locked-off and unobstructed
+- soft, even, natural-looking lighting with no strong cast shadows or lens flare
+- the left and centre of the frame are open floor/wall space where a person can stand;
+  the right half is plain wall or uncluttered space
+- photorealistic, matching a clean corporate training video
+
+Output ONLY the image-generation prompt: a single paragraph with no preamble.
+
+SCRIPT NARRATION
+{narration_text}
+"""
+    try:
+        client = _openai_client()
+    except RuntimeError as exc:
+        raise HTTPException(503, f"OpenAI is not configured: {exc}")
+    try:
+        response = client.responses.create(
+            model=_openai_model(),
+            input=[
+                {"role": "system", "content": "Generate a concise image prompt for an empty video background. Output only the prompt text."},
+                {"role": "user", "content": prompt},
+            ],
         )
-    if has_background:
-        image_n = 2 if has_character else 1
-        scene += (
-            f" The room behind the presenter matches the environment in <Picture {image_n}>, "
-            "in the same colors, lighting and layout."
+        background_prompt = response.output_text.strip()
+    except Exception as exc:
+        raise HTTPException(502, f"OpenAI background description failed: {exc}")
+
+    from app.clients.image_kieai_client import ImageKieClient, ImageKieError
+
+    try:
+        kie = ImageKieClient()
+    except ImageKieError as exc:
+        raise HTTPException(503, f"kie.ai is not configured: {exc}")
+    try:
+        result = kie.generate(
+            prompt=background_prompt,
+            output_format="png",
+            aspect_ratio=BACKGROUND_ASPECT,
         )
-    soundscape = "Quiet, clean room tone."
-    music = "N/A"
-    return (
-        f"integrated_multimodal_description: {scene}\n\n"
-        f"overall_soundscape: {soundscape}\n\n"
-        f"non_diegetic_music: {music}"
+    except ImageKieError as exc:
+        raise HTTPException(502, f"background generation failed: {exc}")
+
+    (project / "backgrounds").mkdir(parents=True, exist_ok=True)
+    relative = "backgrounds/generated_background.png"
+    (project / relative).write_bytes(result["image_bytes"])
+
+    data["background_path"] = relative
+    data["background_prompt"] = background_prompt
+    atomic_write_text(project / "project.json", json.dumps(data, ensure_ascii=False, indent=2))
+
+    return {
+        "project_id": body.project_id,
+        "background_path": relative,
+        "background_url": f"/pdf-review/files/{body.project_id}/{relative}",
+        "background_prompt": background_prompt,
+        "credits_consumed": result["credits_consumed"],
+        "task_id": result["task_id"],
+    }
+
+
+@router.post("/compose-start-frame")
+def compose_start_frame_endpoint(body: StartFrameIn) -> dict[str, Any]:
+    """Build the video model's starting frame from the character and background.
+
+    No image model is involved: the character is cut out and pasted onto the
+    unmodified background, and a flat green rectangle is drawn to its right. The
+    result is verified (flat key colour, background untouched elsewhere) before
+    it is saved, so a frame that reaches disk is one the video model can trust.
+
+    The background is the project's generated one by default, or an image-library
+    file named in `background`. The exact pixels used are saved beside the frame
+    (start_frames/background.png) because the slide is later composited over the
+    panel against that same background.
+    """
+    from PIL import Image
+
+    from app.utils.start_frame import (
+        StartFrameError, compose_start_frame, cut_out_character, verify_start_frame,
     )
+
+    project, data = _load_project(body.project_id)
+    character_path = data.get("character_path")
+    if not character_path or not (project / character_path).is_file():
+        raise HTTPException(409, "no character image has been generated yet")
+    if body.background:
+        background_file = _safe_child(IMAGE_LIBRARY_ROOT, body.background)
+        if not background_file.is_file():
+            raise HTTPException(404, f"background not found in image library: {body.background}")
+    else:
+        background_file = _project_background(project)
+        if background_file is None:
+            raise HTTPException(409, "no background image has been generated yet")
+
+    try:
+        character = cut_out_character(project / character_path)
+        with Image.open(background_file) as bg_file:
+            background = bg_file.convert("RGB")
+        frame = compose_start_frame(character, background)
+        verify_start_frame(frame, background)
+    except StartFrameError as exc:
+        raise HTTPException(422, f"start frame failed: {exc}")
+
+    (project / "start_frames").mkdir(parents=True, exist_ok=True)
+    relative = "start_frames/start_frame.png"
+    (project / relative).write_bytes(frame.png)
+    background.save(project / START_FRAME_BACKGROUND)   # lossless: the exact pixels used
+
+    data["start_frame_path"] = relative
+    data["start_frame_background"] = body.background or "generated"
+    data["start_frame_panel"] = dict(zip("xywh", frame.panel))
+    atomic_write_text(project / "project.json", json.dumps(data, ensure_ascii=False, indent=2))
+
+    return {
+        "project_id": body.project_id,
+        "start_frame_path": relative,
+        "start_frame_url": f"/pdf-review/files/{body.project_id}/{relative}",
+        "size": list(frame.size),
+        "panel": dict(zip("xywh", frame.panel)),
+    }
 
 
 @router.post("/generate-scene")
 def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
     """Generate ONE scene's video with MiniMax H3 on the company GPU server.
 
-    Long-running job. Flow (same green-screen approach as before):
-      1. Send the character (+ optional background) as reference images
-         (ref2va; t2va when there are none).
-      2. Generate with a green-screen prompt - the model renders a chroma-key
-         green panel on the right side of the frame. H3 produces its own audio.
+    Long-running job. Flow:
+      1. Start from the project's start frame (character + background + flat green
+         rectangle) as the clip's first frame (first-frame-to-video).
+      2. The model keeps the green rectangle in place; H3 produces its own audio.
       3. Post-process: composite the scene's crop image onto the green panel
          using the chroma-key utility.
     """
@@ -1398,36 +1500,22 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
     from app.clients.video_minimax_h3_client import MinimaxH3Client, MinimaxH3Error
     from app.utils.chroma_composite import CHROMA_HUE_RANGE, CHROMA_SAT_MIN, CHROMA_VAL_MIN
 
-    # Reference images: character and optional background (NOT the slide crop -
-    # the crop is composited in post-processing via chroma key).
-    image_paths: list[Path] = []
-    character_path = data.get("character_path")
-    has_character = bool(character_path and (project / character_path).is_file())
-    if has_character:
-        image_paths.append(project / character_path)
+    start_frame = data.get("start_frame_path")
+    if not start_frame or not (project / start_frame).is_file():
+        raise HTTPException(409, "no starting frame has been built yet (step 05)")
+    start_frame_path = project / start_frame
+    bg_path = project / START_FRAME_BACKGROUND
+    if not bg_path.is_file():
+        raise HTTPException(409, "the starting frame is missing its background; rebuild it (step 05)")
 
-    # Optional background reference, picked from the shared image library.
-    bg_path: Path | None = None
-    if body.background:
-        bg_path = _safe_child(IMAGE_LIBRARY_ROOT, body.background)
-        if not bg_path.is_file():
-            raise HTTPException(404, f"background not found in image library: {body.background}")
-        image_paths.append(bg_path)
-
-    video_path: Path | None = None
-    if body.reference_video:
-        video_path = _safe_child(VIDEO_LIBRARY_ROOT, body.reference_video)
-        if not video_path.is_file():
-            raise HTTPException(404, f"reference video not found in video library: {body.reference_video}")
-
-    prompt = _scene_prompt(body.narration, has_character, bg_path is not None)
+    prompt = first_frame_scene_prompt(body.narration)
 
     client = MinimaxH3Client()
     try:
         result = client.generate(
             prompt,
-            image_paths,
-            reference_video=video_path,
+            [],
+            first_frame=start_frame_path,
             duration=body.duration_s,
             aspect_ratio=body.aspect_ratio,
             seed=body.seed,
@@ -1489,15 +1577,13 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
         "request": result["request"],
         "inputs": {
             "narration": body.narration,
-            "has_character": has_character,
-            "reference_images": [str(p) for p in image_paths],
-            "reference_video": body.reference_video or None,
+            "start_frame": start_frame,
             "crop_path": body.crop_path,
         },
         "post_processing": {
             "chroma_composite": composited,
             "slide_crop": str(crop_file.relative_to(project)) if crop_file else None,
-            "background": body.background or None,
+            "background": data.get("start_frame_background"),
             "chroma_hue_range": list(CHROMA_HUE_RANGE),
             "chroma_sat_min": CHROMA_SAT_MIN,
             "chroma_val_min": CHROMA_VAL_MIN,
