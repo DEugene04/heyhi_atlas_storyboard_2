@@ -67,6 +67,6 @@ PyMuPDF>=1.24,<2.0           # PDF review: 2.0 auto-loads an unrelated layout mo
 #     both objects and dicts BECAUSE this has already changed once.
 # Verify all of the above on the first live run after any upgrade.
 opencv-python-headless>=4.8  # PDF review: chroma-key composite of the slide crop onto the green panel
-rembg>=2.0               # PDF review: cuts the presenter out of its studio backdrop (app/utils/start_frame.py)
+rembg[cpu]>=2.0           # PDF review: cuts the presenter out of its studio backdrop (app/utils/start_frame.py)
 numpy>=1.26                  # used with OpenCV in app/utils/chroma_composite.py
 # faster-whisper             # OPTIONAL: only for diarizer="whisper" (imported lazily); not installed by default
