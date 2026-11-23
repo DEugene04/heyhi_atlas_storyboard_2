@@ -411,9 +411,15 @@ def _openai_model() -> str:
     return os.environ.get("OPENAI_PDF_MODEL", "gpt-5.4-mini")
 
 
+# The UI is plain files edited in place. With no cache rule a browser may keep serving
+# an old app.js against a new index.html (new buttons, no handlers); no-cache makes it
+# revalidate on every load.
+UI_HEADERS = {"Cache-Control": "no-cache"}
+
+
 @router.get("/")
 def review_ui() -> FileResponse:
-    return FileResponse(WEB_ROOT / "index.html", media_type="text/html")
+    return FileResponse(WEB_ROOT / "index.html", media_type="text/html", headers=UI_HEADERS)
 
 
 @router.get("/ui/{filename}")
@@ -421,7 +427,7 @@ def review_ui_asset(filename: str) -> FileResponse:
     if filename not in {"styles.css", "app.js"}:
         raise HTTPException(404, "unknown UI asset")
     media = "text/css" if filename.endswith(".css") else "text/javascript"
-    return FileResponse(WEB_ROOT / filename, media_type=media)
+    return FileResponse(WEB_ROOT / filename, media_type=media, headers=UI_HEADERS)
 
 
 @router.get("/files/{project_id}/{relative_path:path}")

@@ -32,6 +32,12 @@ def test_pdf_review_ui_is_served() -> None:
     assert "company GPU server" in response.text
 
 
+def test_ui_files_are_revalidated_so_edits_are_never_served_stale() -> None:
+    client = TestClient(app)
+    for path in ("/pdf-review/", "/pdf-review/ui/app.js", "/pdf-review/ui/styles.css"):
+        assert client.get(path).headers["cache-control"] == "no-cache"
+
+
 def test_local_review_flow_reaches_gpu_preflight(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
     client = TestClient(app)
