@@ -17,7 +17,7 @@ const STEPS = [
 
 // Extra director attempts after a blueprint fails validation (0-5; the server rejects more).
 // Each attempt is another paid Gemini call, so this is the cap on spend when a source is awkward.
-const DIRECTOR_MAX_RETRIES = 3;
+const DIRECTOR_MAX_RETRIES = 4;
 
 const state = {
   runId: null,
