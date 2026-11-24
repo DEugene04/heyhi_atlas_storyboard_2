@@ -172,7 +172,7 @@ Uses **Gemini 2.5 Flash** to interpret the source text + config. Outputs `bluepr
 - A **group** is every scene between two B-Rolls; each B-Roll ends one group and starts the next.
 - **One character per group**, the same in every scene of the group; it may change only after a B-Roll. No dialogue between characters.
 - Each group has one `start_frame` (character + background), used by its first video-with-audio scene.
-- Keep the performance simple: the character is centered, speaks to the camera, and uses only small body language. No object or background interaction.
+- Keep the performance simple: the character is centered, speaks to the camera, and uses expressive but contained body language (hand gestures, nods, shrugs), framed half body (waist up). No object or background interaction.
 - `length` for each video-with-audio scene is computed per scene (not per group) from its own word count: `max(4, floor(words / 2.5))`.
 
 ---

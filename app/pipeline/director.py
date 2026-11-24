@@ -114,11 +114,15 @@ AI RULES (HIGHEST PRIORITY — Veo has empirically failed these; be strict):
 
   9. KEEP THE PERFORMANCE SIMPLE. The video model cannot make a character
      handle objects or interact with the background. In every video-with-audio
-     scene the character stands centered in frame, faces the camera, speaks
-     straight into it, and uses only small body language (a nod, a head tilt,
-     a small hand gesture, a shrug). The character does NOT walk, point at or
+     scene the character is centered in frame, faces the camera and speaks
+     straight into it. The character must NOT stand stiff: use lively but
+     contained body language that fits what is being said, such as both hands
+     gesturing at chest height (open palms, counting on fingers, a chopping
+     or emphasising motion), head nods and tilts, raised eyebrows, shoulder
+     shrugs, and a slight lean toward or away from the camera. Vary the
+     gesture from scene to scene. The character does NOT walk, point at or
      touch props, pick anything up, sit, turn away, or move through the
-     environment. The camera stays still on a medium shot.
+     environment. The camera stays still on a medium close-up (waist up).
 
 TOP-LEVEL SHAPE (exact key set, exact order):
   {
@@ -183,9 +187,11 @@ It is a single frame — NOT a grid, NOT a storyboard.
 - "prompt" TEMPLATE (char_ids like "char_teacher" are role labels the user
   will substitute; do not describe how the character LOOKS):
     "<char_id> stands in the center of the frame, facing the camera, upper
-     body and head fully visible, hands relaxed at their sides, set into the
-     environment shown in the background reference. Medium shot at eye level,
-     the character fills about half the frame height. Character design and
+     head and torso visible from the waist up (half body, NOT three-quarter
+     or full body), hands raised naturally near chest height, set into the
+     environment shown in the background reference. Medium close-up at eye
+     level, the character fills about two thirds of the frame height.
+     Character design and
      wardrobe exactly as in the character reference; environment, lighting
      and colors exactly as in the background reference. %(aspect)s format."
 - "reference": EXACTLY two ids: the group's ONE char_id, then ONE bg_id.
@@ -244,7 +250,7 @@ Each scene is one Veo clip. Two types:
          * CONTINUATION scene (same group, word-count split):
            "scene:<prev_scene_id>"
      - Subject: the one character, centered, facing the camera. Action: speaks
-       to the camera with small body language only (AI RULE #9).
+       to the camera with expressive, contained body language (AI RULE #9).
      - Action field MUST include verbatim:
          "the character's lips and jaw move continuously as if speaking,
           articulating dialogue that will be overlaid separately in
@@ -294,7 +300,7 @@ SCENE PROMPT FORMAT (strict — render layer parses these labels):
 Subject: <for video-with-audio: the one speaking character, centered, facing camera.
    For B-Roll: the environment, object, or texture in frame — no people>,
  Action: <what happens. For video-with-audio, include the verbatim lip-
-   sync clause, then only a nod, head tilt, or small hand gesture.>,
+   sync clause, then expressive hand gestures at chest height, nods, head tilts, or shrugs.>,
  Context: <environment + background elements>,
  Style and Ambience: <mood + lighting>, wordless illustration; all
    surfaces smooth and blank; no signage, no writing, no text, no labels, or numerical

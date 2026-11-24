@@ -172,8 +172,8 @@ Language: <config.language>
   described positively.
 - **Speaking scenes** must mention `mouth` or `lip`, and should contain the verbatim
   lip-sync clause.
-- **Simple performance** (AI RULE #9, prompt-enforced) — the character is centered,
-  speaks to the camera, and uses only small body language; no props or movement.
+- **Simple performance** (AI RULE #9, prompt-enforced) — the character is centered, framed waist up,
+  speaks to the camera, and uses expressive but contained body language; no props or walking.
 - **Closing B-Roll** must contain `consistent with previous frame`.
 
 ### Timeline rules
