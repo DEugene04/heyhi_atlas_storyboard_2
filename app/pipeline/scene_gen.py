@@ -15,7 +15,7 @@ from pathlib import Path
 
 from app import costs
 from app.utils.ffmpeg_utils import (
-    FfmpegError, extract_last_frame, get_duration, trim_video,
+    FfmpegError, extract_last_frame, get_duration, strip_audio, trim_video,
 )
 from app.clients.video_veo_client import (
     VeoClient, VeoError, VeoJobSpec, generate_with_retry,
@@ -183,10 +183,16 @@ class SceneGenerator:
         )
         self.scenes_dir.mkdir(parents=True, exist_ok=True)
         self.raw_dir.mkdir(parents=True, exist_ok=True)
-        (self.raw_dir / f"{scene['id']}.mp4").write_bytes(mp4)
+        raw_path = self.raw_dir / f"{scene['id']}.mp4"
+        raw_path.write_bytes(mp4)
+        if scene.get("type") == "B-Roll":
+            # B-Roll is silent so the model's ambience never clashes with the
+            # background music; the raw copy is silent too, so every later copy
+            # (resume, re-render) is.
+            strip_audio(raw_path)
 
         dest = self.scenes_dir / f"{scene['id']}.mp4"
-        dest.write_bytes(mp4)
+        shutil.copyfile(raw_path, dest)
 
         if scene.get("type") == "B-Roll":
             length = scene.get("length")

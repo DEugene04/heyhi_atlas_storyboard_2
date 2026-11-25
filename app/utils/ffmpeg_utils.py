@@ -175,6 +175,21 @@ def extract_audio(mp4_path: str | Path, out_wav: str | Path,
                 "-f", "wav", out_wav], expect=out_wav, label="extract_audio")
     return out_wav
 
+def strip_audio(mp4_path: str | Path) -> Path:
+    """Remove the audio track in place (video stream copied, not re-encoded)."""
+    mp4_path = Path(mp4_path)
+    if not mp4_path.is_file():
+        raise FfmpegError(f"strip_audio: input not found {mp4_path}")
+    tmp = Path(tempfile.mkstemp(dir=str(mp4_path.parent), suffix=".mp4")[1])
+    try:
+        run_ffmpeg(["-i", mp4_path, "-c:v", "copy", "-an", tmp],
+                   expect=tmp, label="strip_audio")
+    except FfmpegError:
+        tmp.unlink(missing_ok=True)
+        raise
+    os.replace(tmp, mp4_path)
+    return mp4_path
+
 def trim_video(mp4_path: str | Path, seconds: float, out_mp4: str | Path | None = None) -> Path:
     """Trim a video to the first `seconds`.
 
