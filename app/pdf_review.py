@@ -411,6 +411,25 @@ def _openai_model() -> str:
     return os.environ.get("OPENAI_PDF_MODEL", "gpt-5.4-mini")
 
 
+def _image_client(aspect_ratio: str):
+    """gpt-image-2 client (the same one the Studio pipeline uses). Tests override this."""
+    from app.pipeline.image_gen import OpenAIImageClient
+
+    return OpenAIImageClient(_openai_client(), aspect_ratio=aspect_ratio)
+
+
+def _render_image(aspect_ratio: str, prompt: str, references: list[bytes], what: str) -> bytes:
+    """One gpt-image-2 image, mapped onto the HTTP errors this router uses."""
+    try:
+        client = _image_client(aspect_ratio)
+    except RuntimeError as exc:
+        raise HTTPException(503, f"OpenAI is not configured: {exc}")
+    try:
+        return client.generate(prompt, references)
+    except Exception as exc:
+        raise HTTPException(502, f"{what} failed: {exc}")
+
+
 # The UI is plain files edited in place. With no cache rule a browser may keep serving
 # an old app.js against a new index.html (new buttons, no handlers); no-cache makes it
 # revalidate on every load.
@@ -1219,10 +1238,10 @@ def _load_script(project: Path) -> dict[str, Any]:
 
 @router.post("/generate-character")
 def generate_character(body: GenerateCharacterIn) -> dict[str, Any]:
-    """Analyse the approved script and generate a character image via kie.ai.
+    """Analyse the approved script and generate a character image with gpt-image-2.
 
     Uses OpenAI to craft a character description from the script, then sends
-    that description to google/nano-banana (9:16, PNG).  The generated image
+    that description to gpt-image-2 (9:16 portrait).  The generated image
     is stored with the project and surfaced on the front-end for review.
     """
     project, data = _load_project(body.project_id)
@@ -1261,24 +1280,11 @@ SCRIPT NARRATION
     except Exception as exc:
         raise HTTPException(502, f"OpenAI character description failed: {exc}")
 
-    from app.clients.image_kieai_client import ImageKieClient, ImageKieError
-
-    try:
-        kie = ImageKieClient()
-    except ImageKieError as exc:
-        raise HTTPException(503, f"kie.ai is not configured: {exc}")
-    try:
-        result = kie.generate(
-            prompt=character_prompt,
-            output_format="png",
-            aspect_ratio="9:16",
-        )
-    except ImageKieError as exc:
-        raise HTTPException(502, f"character generation failed: {exc}")
+    image = _render_image("9:16", character_prompt, [], "character generation")
 
     (project / "characters").mkdir(parents=True, exist_ok=True)
     relative = "characters/generated_character.png"
-    (project / relative).write_bytes(result["image_bytes"])
+    (project / relative).write_bytes(image)
 
     data["character_path"] = relative
     data["character_prompt"] = character_prompt
@@ -1289,8 +1295,6 @@ SCRIPT NARRATION
         "character_path": relative,
         "character_url": f"/pdf-review/files/{body.project_id}/{relative}",
         "character_prompt": character_prompt,
-        "credits_consumed": result["credits_consumed"],
-        "task_id": result["task_id"],
     }
 
 
@@ -1298,36 +1302,20 @@ SCRIPT NARRATION
 def regenerate_character(body: RegenerateCharacterIn) -> dict[str, Any]:
     """Regenerate the character image based on a user adjustment prompt.
 
-    Uses google/nano-banana-edit, passing the previously generated image as
-    input alongside the user's instruction.
+    Uses gpt-image-2 image editing, passing the previously generated image as
+    the reference alongside the user's instruction.
     """
     project, data = _load_project(body.project_id)
     character_path = data.get("character_path")
     if not character_path or not (project / character_path).is_file():
         raise HTTPException(409, "no character image has been generated yet")
 
-    from app.clients.image_kieai_client import ImageKieClient, ImageKieError
-
-    try:
-        kie = ImageKieClient()
-    except ImageKieError as exc:
-        raise HTTPException(503, f"kie.ai is not configured: {exc}")
-
-    image_url = kie.upload_local(project / character_path)
-
-    try:
-        result = kie.edit(
-            prompt=body.prompt,
-            image_urls=[image_url],
-            output_format="png",
-            aspect_ratio="9:16",
-        )
-    except ImageKieError as exc:
-        raise HTTPException(502, f"character regeneration failed: {exc}")
+    image = _render_image("9:16", body.prompt, [(project / character_path).read_bytes()],
+                          "character regeneration")
 
     (project / "characters").mkdir(parents=True, exist_ok=True)
     relative = "characters/generated_character.png"
-    (project / relative).write_bytes(result["image_bytes"])
+    (project / relative).write_bytes(image)
 
     data["character_path"] = relative
     atomic_write_text(project / "project.json", json.dumps(data, ensure_ascii=False, indent=2))
@@ -1336,20 +1324,21 @@ def regenerate_character(body: RegenerateCharacterIn) -> dict[str, Any]:
         "project_id": body.project_id,
         "character_path": relative,
         "character_url": f"/pdf-review/files/{body.project_id}/{relative}",
-        "credits_consumed": result["credits_consumed"],
-        "task_id": result["task_id"],
     }
 
 
 START_FRAME_BACKGROUND = "start_frames/background.png"
+# One starting frame per panel shape; a scene uses the one matching its slide image.
+START_FRAME_FILES = {"landscape": "start_frames/start_frame_landscape.png",
+                     "portrait": "start_frames/start_frame_portrait.png"}
 BACKGROUND_ASPECT = "16:9"   # the start frame is landscape: presenter left, panel right
 
 
 @router.post("/generate-background")
 def generate_background(body: GenerateBackgroundIn) -> dict[str, Any]:
-    """Generate an empty room that suits the approved script, via kie.ai.
+    """Generate an empty room that suits the approved script, with gpt-image-2.
 
-    OpenAI turns the script into a setting description; kie.ai renders it as a
+    OpenAI turns the script into a setting description; gpt-image-2 renders it as a
     16:9 plate with no people and no text. The plate is later used unmodified as
     the canvas of the start frame (see compose_start_frame).
     """
@@ -1397,24 +1386,11 @@ SCRIPT NARRATION
     except Exception as exc:
         raise HTTPException(502, f"OpenAI background description failed: {exc}")
 
-    from app.clients.image_kieai_client import ImageKieClient, ImageKieError
-
-    try:
-        kie = ImageKieClient()
-    except ImageKieError as exc:
-        raise HTTPException(503, f"kie.ai is not configured: {exc}")
-    try:
-        result = kie.generate(
-            prompt=background_prompt,
-            output_format="png",
-            aspect_ratio=BACKGROUND_ASPECT,
-        )
-    except ImageKieError as exc:
-        raise HTTPException(502, f"background generation failed: {exc}")
+    image = _render_image(BACKGROUND_ASPECT, background_prompt, [], "background generation")
 
     (project / "backgrounds").mkdir(parents=True, exist_ok=True)
     relative = "backgrounds/generated_background.png"
-    (project / relative).write_bytes(result["image_bytes"])
+    (project / relative).write_bytes(image)
 
     data["background_path"] = relative
     data["background_prompt"] = background_prompt
@@ -1425,19 +1401,19 @@ SCRIPT NARRATION
         "background_path": relative,
         "background_url": f"/pdf-review/files/{body.project_id}/{relative}",
         "background_prompt": background_prompt,
-        "credits_consumed": result["credits_consumed"],
-        "task_id": result["task_id"],
     }
 
 
 @router.post("/compose-start-frame")
 def compose_start_frame_endpoint(body: StartFrameIn) -> dict[str, Any]:
-    """Build the video model's starting frame from the character and background.
+    """Build the video model's starting frames from the character and background.
 
     No image model is involved: the character is cut out and pasted onto the
-    unmodified background, and a flat green rectangle is drawn to its right. The
-    result is verified (flat key colour, background untouched elsewhere) before
-    it is saved, so a frame that reaches disk is one the video model can trust.
+    unmodified background, and a flat green rectangle is drawn to its right. Two
+    frames are built, one with a landscape (16:9) rectangle and one with a portrait
+    (9:16) one; a scene later uses whichever matches its slide image. Each result
+    is verified (flat key colour, background untouched elsewhere) before it is
+    saved, so a frame that reaches disk is one the video model can trust.
 
     The background is the project's generated one by default, or an image-library
     file named in `background`. The exact pixels used are saved beside the frame
@@ -1447,7 +1423,8 @@ def compose_start_frame_endpoint(body: StartFrameIn) -> dict[str, Any]:
     from PIL import Image
 
     from app.utils.start_frame import (
-        StartFrameError, compose_start_frame, cut_out_character, verify_start_frame,
+        ORIENTATIONS, StartFrameError, compose_start_frame, cut_out_character,
+        verify_start_frame,
     )
 
     project, data = _load_project(body.project_id)
@@ -1463,31 +1440,41 @@ def compose_start_frame_endpoint(body: StartFrameIn) -> dict[str, Any]:
         if background_file is None:
             raise HTTPException(409, "no background image has been generated yet")
 
+    frames = {}
     try:
         character = cut_out_character(project / character_path)
         with Image.open(background_file) as bg_file:
             background = bg_file.convert("RGB")
-        frame = compose_start_frame(character, background)
-        verify_start_frame(frame, background)
+        for orientation in ORIENTATIONS:
+            frame = compose_start_frame(character, background, orientation)
+            verify_start_frame(frame, background)
+            frames[orientation] = frame
     except StartFrameError as exc:
         raise HTTPException(422, f"start frame failed: {exc}")
 
     (project / "start_frames").mkdir(parents=True, exist_ok=True)
-    relative = "start_frames/start_frame.png"
-    (project / relative).write_bytes(frame.png)
+    for orientation, frame in frames.items():
+        (project / START_FRAME_FILES[orientation]).write_bytes(frame.png)
     background.save(project / START_FRAME_BACKGROUND)   # lossless: the exact pixels used
 
-    data["start_frame_path"] = relative
+    data["start_frames"] = {
+        o: {"path": START_FRAME_FILES[o], "panel": dict(zip("xywh", f.panel))}
+        for o, f in frames.items()
+    }
     data["start_frame_background"] = body.background or "generated"
-    data["start_frame_panel"] = dict(zip("xywh", frame.panel))
     atomic_write_text(project / "project.json", json.dumps(data, ensure_ascii=False, indent=2))
 
     return {
         "project_id": body.project_id,
-        "start_frame_path": relative,
-        "start_frame_url": f"/pdf-review/files/{body.project_id}/{relative}",
-        "size": list(frame.size),
-        "panel": dict(zip("xywh", frame.panel)),
+        "size": list(next(iter(frames.values())).size),
+        "start_frames": {
+            o: {
+                "path": START_FRAME_FILES[o],
+                "url": f"/pdf-review/files/{body.project_id}/{START_FRAME_FILES[o]}",
+                "panel": dict(zip("xywh", f.panel)),
+            }
+            for o, f in frames.items()
+        },
     }
 
 
@@ -1506,7 +1493,19 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
     from app.clients.video_minimax_h3_client import MinimaxH3Client, MinimaxH3Error
     from app.utils.chroma_composite import CHROMA_HUE_RANGE, CHROMA_SAT_MIN, CHROMA_VAL_MIN
 
-    start_frame = data.get("start_frame_path")
+    # The slide image decides the frame: a taller-than-wide slide gets the portrait
+    # green rectangle, anything else the landscape one.
+    from PIL import Image
+    from app.utils.start_frame import slide_orientation
+
+    crop_file = _safe_child(project, body.crop_path) if body.crop_path else None
+    if crop_file is not None and not crop_file.is_file():
+        crop_file = None
+    orientation = "landscape"
+    if crop_file is not None:
+        with Image.open(crop_file) as crop_img:
+            orientation = slide_orientation(crop_img.size)
+    start_frame = (data.get("start_frames") or {}).get(orientation, {}).get("path")
     if not start_frame or not (project / start_frame).is_file():
         raise HTTPException(409, "no starting frame has been built yet (step 05)")
     start_frame_path = project / start_frame
@@ -1539,24 +1538,20 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
 
     # Post-processing: chroma-key composite the slide crop onto the green panel.
     composited = False
-    crop_file: Path | None = None
     relative = f"videos/{safe_id}.mp4"
-    if body.crop_path:
-        crop = _safe_child(project, body.crop_path)
-        if crop.is_file():
-            crop_file = crop
-            try:
-                from app.utils.chroma_composite import composite_video
-                out = composite_video(
-                    project / raw_relative,
-                    crop,
-                    project / relative,
-                    bg_path=bg_path,
-                )
-                if out is not None:
-                    composited = True
-            except Exception:
-                pass
+    if crop_file is not None:
+        try:
+            from app.utils.chroma_composite import composite_video
+            out = composite_video(
+                project / raw_relative,
+                crop_file,
+                project / relative,
+                bg_path=bg_path,
+            )
+            if out is not None:
+                composited = True
+        except Exception:
+            pass
 
     if not composited:
         import shutil
@@ -1584,6 +1579,7 @@ def generate_scene(body: GenerateSceneIn) -> dict[str, Any]:
         "inputs": {
             "narration": body.narration,
             "start_frame": start_frame,
+            "start_frame_orientation": orientation,
             "crop_path": body.crop_path,
         },
         "post_processing": {

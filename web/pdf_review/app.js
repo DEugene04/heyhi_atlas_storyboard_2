@@ -463,31 +463,31 @@ $("#toPreflight").addEventListener("click", async () => {
   go(5);
 });
 
-// --- Step 05: Character generation (kie.ai Nano Banana) ---
+// --- Step 05: Character generation (gpt-image-2) ---
 
 async function generateCharacterFromScript() {
-  showBusy("Generating character", "OpenAI analyses the script, then kie.ai generates a presenter image. This may take a minute.");
+  showBusy("Generating character", "OpenAI analyses the script, then gpt-image-2 generates a presenter image. This may take a minute.");
   try {
     const data = await jsonPost("/generate-character", { project_id: state.project.project_id });
     state.project.character_path = data.character_path;
-    showCharacterPreview(data.character_url, data.character_prompt, data.credits_consumed);
-    notice(`Character generated (${data.credits_consumed ?? "?"} credits). Review it and adjust if needed.`);
+    showCharacterPreview(data.character_url, data.character_prompt);
+    notice("Character generated. Review it and adjust if needed.");
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 }
 
 async function regenerateCharacterWithPrompt() {
   const userPrompt = $("#characterRegenPrompt").value.trim();
   if (!userPrompt) { notice("Enter a prompt describing how to adjust the character.", true); return; }
-  showBusy("Regenerating character", "Editing the previous image with your prompt via kie.ai. This may take a minute.");
+  showBusy("Regenerating character", "Editing the previous image with your prompt (gpt-image-2). This may take a minute.");
   try {
     const data = await jsonPost("/regenerate-character", { project_id: state.project.project_id, prompt: userPrompt });
     state.project.character_path = data.character_path;
-    showCharacterPreview(data.character_url, null, data.credits_consumed);
-    notice(`Character regenerated (${data.credits_consumed ?? "?"} credits). Review the result.`);
+    showCharacterPreview(data.character_url, null);
+    notice("Character regenerated. Review the result.");
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 }
 
-function showCharacterPreview(url, prompt, credits) {
+function showCharacterPreview(url, prompt) {
   const img = $("#characterPreviewImg");
   img.src = `${url}?v=${Date.now()}`;
   img.classList.remove("hidden");
@@ -495,10 +495,6 @@ function showCharacterPreview(url, prompt, credits) {
   if (prompt) {
     $("#characterPromptText").textContent = `Prompt: ${prompt}`;
     $("#characterPromptText").classList.remove("hidden");
-  }
-  if (credits != null) {
-    $("#characterCredits").textContent = `Credits consumed: ${credits}`;
-    $("#characterCredits").classList.remove("hidden");
   }
   $("#characterRegenPanel").classList.remove("hidden");
   $("#characterGenStatus").textContent = "Generated · review required";
@@ -529,31 +525,40 @@ function syncStartFrameButton() {
 }
 
 async function generateBackgroundFromScript() {
-  showBusy("Generating background", "OpenAI picks a setting from the script, then kie.ai renders it. This may take a minute.");
+  showBusy("Generating background", "OpenAI picks a setting from the script, then gpt-image-2 renders it. This may take a minute.");
   try {
     const data = await jsonPost("/generate-background", { project_id: state.project.project_id });
     showImage("#backgroundPreviewImg", "#backgroundPlaceholder", data.background_url);
     $("#backgroundPromptText").textContent = `Prompt: ${data.background_prompt}`;
     $("#backgroundPromptText").classList.remove("hidden");
     // A new background makes any earlier starting frame stale.
-    $("#startFramePreviewImg").classList.add("hidden");
-    $("#startFramePlaceholder").classList.remove("hidden");
-    $("#startFrameInfo").textContent = "";
+    clearStartFrames();
     syncStartFrameButton();
-    notice(`Background generated (${data.credits_consumed ?? "?"} credits). Build the starting frame next.`);
+    notice("Background generated. Build the starting frames next.");
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 }
 
+function clearStartFrames() {
+  for (const name of ["Landscape", "Portrait"]) {
+    $(`#startFrame${name}Img`).classList.add("hidden");
+    $(`#startFrame${name}Placeholder`).classList.remove("hidden");
+    $(`#startFrame${name}Info`).textContent = "";
+  }
+}
+
 async function buildStartFrame() {
-  showBusy("Building starting frame", "Cutting out the character and compositing it onto the background. No image model is used.");
+  showBusy("Building starting frames", "Cutting out the character and compositing it onto the background, once per green-rectangle shape. No image model is used.");
   try {
     const data = await jsonPost("/compose-start-frame", {
       project_id: state.project.project_id,
       background: $("#backgroundSelect").value,   // "" = the generated background
     });
-    showImage("#startFramePreviewImg", "#startFramePlaceholder", data.start_frame_url);
-    $("#startFrameInfo").textContent = `· ${data.size[0]}×${data.size[1]} · green panel ${data.panel.w}×${data.panel.h}`;
-    notice("Starting frame built and verified.");
+    for (const [orientation, frame] of Object.entries(data.start_frames)) {
+      const name = orientation === "portrait" ? "Portrait" : "Landscape";
+      showImage(`#startFrame${name}Img`, `#startFrame${name}Placeholder`, `${frame.url}?v=${Date.now()}`);
+      $(`#startFrame${name}Info`).textContent = `· ${data.size[0]}×${data.size[1]} · green panel ${frame.panel.w}×${frame.panel.h}`;
+    }
+    notice("Starting frames built and verified.");
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 }
 
@@ -653,12 +658,10 @@ async function loadBackgroundOptions() {
 }
 // A freshly imported project has no background or starting frame yet.
 function resetBackgroundPanel() {
-  for (const [img, ph] of [["#backgroundPreviewImg", "#backgroundPlaceholder"], ["#startFramePreviewImg", "#startFramePlaceholder"]]) {
-    $(img).classList.add("hidden");
-    $(ph).classList.remove("hidden");
-  }
+  $("#backgroundPreviewImg").classList.add("hidden");
+  $("#backgroundPlaceholder").classList.remove("hidden");
   $("#backgroundPromptText").classList.add("hidden");
-  $("#startFrameInfo").textContent = "";
+  clearStartFrames();
   syncStartFrameButton();
   loadBackgroundOptions().catch(() => {});
 }

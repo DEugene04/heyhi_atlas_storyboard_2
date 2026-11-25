@@ -35,8 +35,11 @@ CHARACTER_HEIGHT = 0.96         # character's bounding-box height, bottom-flush
 CHARACTER_CENTER_X = 0.22       # preferred horizontal centre of the character
 PANEL_LEFT = 0.46
 PANEL_RIGHT = 0.96
-PANEL_ASPECT = 16 / 9           # a slide crop is landscape
-PANEL_MAX_HEIGHT = 0.80
+# Two panel shapes, picked per slide image (see slide_orientation): 16:9 for a
+# landscape slide, 9:16 for a portrait one. The frame itself is always landscape.
+PANEL_ASPECT = {"landscape": 16 / 9, "portrait": 9 / 16}
+PANEL_MAX_HEIGHT = {"landscape": 0.80, "portrait": 0.84}
+ORIENTATIONS = tuple(PANEL_ASPECT)
 PANEL_CENTER_Y = 0.46           # slightly above centre, where a screen would hang
 
 # The cut-out edge is pulled in by this many pixels (at source size) so the
@@ -48,6 +51,12 @@ ALPHA_MIN_BBOX = 8              # alpha above this counts as "character"
 
 class StartFrameError(RuntimeError):
     pass
+
+
+def slide_orientation(size: tuple[int, int]) -> str:
+    """"portrait" when the slide image is taller than wide, else "landscape"."""
+    w, h = size
+    return "portrait" if h > w else "landscape"
 
 
 @dataclass(frozen=True)
@@ -87,8 +96,15 @@ def _refine_alpha(alpha: Image.Image) -> Image.Image:
     return alpha
 
 
-def compose_start_frame(character: Image.Image, background: Image.Image) -> StartFrame:
-    """Paste `character` (RGBA) onto `background`, draw the green panel right."""
+def compose_start_frame(character: Image.Image, background: Image.Image,
+                        orientation: str = "landscape") -> StartFrame:
+    """Paste `character` (RGBA) onto `background`, draw the green panel right.
+
+    `orientation` is the shape of the panel ("landscape" 16:9 or "portrait" 9:16);
+    the frame stays landscape either way.
+    """
+    if orientation not in PANEL_ASPECT:
+        raise StartFrameError(f"unknown panel orientation {orientation!r}")
     bg = background.convert("RGB")
     w, h = bg.size
     if w < h:
@@ -117,12 +133,14 @@ def compose_start_frame(character: Image.Image, background: Image.Image) -> Star
 
     # Green panel: a hard-edged, solid rectangle (ImageDraw would be equivalent;
     # an array write makes "no anti-aliasing" structural rather than a setting).
+    aspect = PANEL_ASPECT[orientation]
     pw = round((PANEL_RIGHT - PANEL_LEFT) * w)
-    ph = round(pw / PANEL_ASPECT)
-    if ph > PANEL_MAX_HEIGHT * h:
-        ph = round(PANEL_MAX_HEIGHT * h)
-        pw = round(ph * PANEL_ASPECT)
-    px = round(PANEL_LEFT * w)
+    ph = round(pw / aspect)
+    if ph > PANEL_MAX_HEIGHT[orientation] * h:
+        ph = round(PANEL_MAX_HEIGHT[orientation] * h)
+        pw = round(ph * aspect)
+    # centred in the right-hand zone; for a landscape panel that is the whole zone
+    px = round((PANEL_LEFT + PANEL_RIGHT) / 2 * w - pw / 2)
     py = round(PANEL_CENTER_Y * h - ph / 2)
     py = max(0, min(py, h - ph))
     arr = np.asarray(frame).copy()

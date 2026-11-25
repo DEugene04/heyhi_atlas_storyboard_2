@@ -76,3 +76,26 @@ def test_cut_out_keeps_existing_alpha_without_matting(tmp_path):
     _character().save(path)
     cut = cut_out_character(path)               # real alpha -> rembg not needed
     assert cut.getchannel("A").getextrema() == (0, 255)
+
+
+def test_portrait_panel_is_tall_clear_of_the_character_and_verifies():
+    bg = _background()
+    portrait = compose_start_frame(_character(), bg, "portrait")
+    landscape = compose_start_frame(_character(), bg, "landscape")
+    px, py, pw, ph = portrait.panel
+    assert abs(pw / ph - 9 / 16) < 0.02
+    lx, ly, lw, lh = landscape.panel
+    assert abs(lw / lh - 16 / 9) < 0.02
+    assert portrait.size == landscape.size == bg.size           # the frame stays landscape
+    assert portrait.character_box == landscape.character_box    # same character either way
+    verify_start_frame(portrait, bg)
+    verify_start_frame(landscape, bg)
+
+
+def test_slide_orientation_and_unknown_orientation():
+    from app.utils.start_frame import slide_orientation
+    assert slide_orientation((300, 500)) == "portrait"
+    assert slide_orientation((500, 300)) == "landscape"
+    assert slide_orientation((400, 400)) == "landscape"
+    with pytest.raises(StartFrameError, match="orientation"):
+        compose_start_frame(_character(), _background(), "diagonal")

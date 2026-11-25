@@ -432,9 +432,14 @@ def test_start_frame_needs_a_background_then_builds(tmp_path, monkeypatch) -> No
     _write_png(project / "backgrounds/generated_background.png", (640, 360), (150, 110, 90))
     r = client.post("/pdf-review/compose-start-frame", json={"project_id": pid})
     assert r.status_code == 200, r.text
-    assert (project / r.json()["start_frame_path"]).is_file()
+    frames = r.json()["start_frames"]
+    assert set(frames) == {"landscape", "portrait"}
+    for frame in frames.values():
+        assert (project / frame["path"]).is_file()
+        assert client.get(frame["url"]).status_code == 200
+    assert frames["portrait"]["panel"]["h"] > frames["portrait"]["panel"]["w"]
+    assert frames["landscape"]["panel"]["w"] > frames["landscape"]["panel"]["h"]
     assert (project / review.START_FRAME_BACKGROUND).is_file()      # exact pixels kept for compositing
-    assert client.get(r.json()["start_frame_url"]).status_code == 200
 
 
 def test_start_frame_can_use_an_image_library_background(tmp_path, monkeypatch) -> None:
@@ -452,14 +457,14 @@ def test_start_frame_can_use_an_image_library_background(tmp_path, monkeypatch) 
     assert missing.status_code == 404
 
 
-def test_scene_generation_starts_from_the_start_frame(tmp_path, monkeypatch) -> None:
-    client, pid, project = _project_with_character(tmp_path, monkeypatch)
-    body = {"project_id": pid, "scene_id": "s1", "narration": "hi"}
-    assert client.post("/pdf-review/generate-scene", json=body).status_code == 409   # no frame yet
-
+def _scene_with_crop(client, pid, project, crop_size, monkeypatch):
+    """Build frames, then run generate-scene with a crop of `crop_size`; return what H3 saw."""
     _write_png(project / "backgrounds/generated_background.png", (640, 360), (150, 110, 90))
     assert client.post("/pdf-review/compose-start-frame", json={"project_id": pid}).status_code == 200
-
+    body = {"project_id": pid, "scene_id": "s1", "narration": "hi"}
+    if crop_size:
+        _write_png(project / "crops/slide.png", crop_size, (10, 20, 30))
+        body["crop_path"] = "crops/slide.png"
     seen = {}
 
     class FakeH3:
@@ -470,6 +475,62 @@ def test_scene_generation_starts_from_the_start_frame(tmp_path, monkeypatch) -> 
     import app.clients.video_minimax_h3_client as h3
     monkeypatch.setattr(h3, "MinimaxH3Client", FakeH3)
     assert client.post("/pdf-review/generate-scene", json=body).status_code == 502
-    assert seen["first_frame"] == project / "start_frames/start_frame.png"
+    return seen
+
+
+def test_scene_generation_starts_from_the_start_frame(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    body = {"project_id": pid, "scene_id": "s1", "narration": "hi"}
+    assert client.post("/pdf-review/generate-scene", json=body).status_code == 409   # no frame yet
+
+    seen = _scene_with_crop(client, pid, project, None, monkeypatch)
+    assert seen["first_frame"] == project / review.START_FRAME_FILES["landscape"]   # no crop -> landscape
     assert seen["images"] == []                    # first-frame mode excludes reference images
     assert "<d>[en] hi</d>" in seen["prompt"]
+
+
+def test_scene_frame_follows_the_slide_orientation(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    portrait = _scene_with_crop(client, pid, project, (300, 500), monkeypatch)
+    assert portrait["first_frame"] == project / review.START_FRAME_FILES["portrait"]
+    landscape = _scene_with_crop(client, pid, project, (500, 300), monkeypatch)
+    assert landscape["first_frame"] == project / review.START_FRAME_FILES["landscape"]
+    square = _scene_with_crop(client, pid, project, (400, 400), monkeypatch)
+    assert square["first_frame"] == project / review.START_FRAME_FILES["landscape"]
+
+
+def _fake_openai_images(monkeypatch):
+    """Route all three PDF-review image calls to a recorder; no network."""
+    calls = []
+
+    class FakeImages:
+        def __init__(self, aspect):
+            self.aspect = aspect
+
+        def generate(self, prompt, references):
+            from PIL import Image
+            calls.append((self.aspect, prompt, len(references)))
+            buf = io.BytesIO()
+            Image.new("RGB", (64, 36), (1, 2, 3)).save(buf, format="PNG")
+            return buf.getvalue()
+
+    monkeypatch.setattr(review, "_image_client", lambda aspect: FakeImages(aspect))
+    responses = SimpleNamespace(create=lambda **kw: SimpleNamespace(output_text="a prompt"))
+    monkeypatch.setattr(review, "_openai_client", lambda: SimpleNamespace(responses=responses))
+    return calls
+
+
+def test_character_and_background_use_gpt_image(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    (project / "script.local.json").write_text(json.dumps(
+        {"sections": [{"heading": "h", "narration": "n"}]}))
+    calls = _fake_openai_images(monkeypatch)
+
+    r = client.post("/pdf-review/generate-character", json={"project_id": pid})
+    assert r.status_code == 200, r.text
+    r = client.post("/pdf-review/regenerate-character", json={"project_id": pid, "prompt": "smile"})
+    assert r.status_code == 200, r.text
+    r = client.post("/pdf-review/generate-background", json={"project_id": pid})
+    assert r.status_code == 200, r.text
+    assert (project / r.json()["background_path"]).is_file()
+    assert [(a, refs) for a, _, refs in calls] == [("9:16", 0), ("9:16", 1), ("16:9", 0)]

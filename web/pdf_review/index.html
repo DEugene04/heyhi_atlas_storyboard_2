@@ -143,7 +143,6 @@
             </div>
             <div class="character-gen-info">
               <p id="characterPromptText" class="character-prompt-text hidden"></p>
-              <p id="characterCredits" class="hidden"></p>
             </div>
           </div>
           <div class="character-gen-actions">
@@ -160,10 +159,11 @@
         </div>
         <div class="panel character-gen-panel">
           <h4>Background &amp; starting frame</h4>
-          <p class="hint">A background is generated from the script. The starting frame places the approved character on the left of the background with a flat green rectangle on the right, built from the exact character and background pixels (no re-drawing). Every scene video starts from this frame, so build it before generating videos.</p>
+          <p class="hint">A background is generated from the script. The starting frame places the approved character on the left of the background with a flat green rectangle on the right (a landscape one and a portrait one, chosen automatically per slide image), built from the exact character and background pixels (no re-drawing). Every scene video starts from the matching frame, so build them before generating videos.</p>
           <div class="frame-previews">
             <figure><div class="frame-box"><span id="backgroundPlaceholder">Background appears here</span><img id="backgroundPreviewImg" class="hidden" alt="Generated background"></div><figcaption>Background</figcaption></figure>
-            <figure><div class="frame-box"><span id="startFramePlaceholder">Starting frame appears here</span><img id="startFramePreviewImg" class="hidden" alt="Starting frame"></div><figcaption>Starting frame <small id="startFrameInfo"></small></figcaption></figure>
+            <figure><div class="frame-box"><span id="startFrameLandscapePlaceholder">Landscape starting frame appears here</span><img id="startFrameLandscapeImg" class="hidden" alt="Starting frame, landscape green rectangle"></div><figcaption>Starting frame · landscape slides <small id="startFrameLandscapeInfo"></small></figcaption></figure>
+            <figure><div class="frame-box"><span id="startFramePortraitPlaceholder">Portrait starting frame appears here</span><img id="startFramePortraitImg" class="hidden" alt="Starting frame, portrait green rectangle"></div><figcaption>Starting frame · portrait slides <small id="startFramePortraitInfo"></small></figcaption></figure>
           </div>
           <p id="backgroundPromptText" class="character-prompt-text hidden"></p>
           <div class="character-gen-actions">
@@ -174,7 +174,7 @@
             <select id="backgroundSelect"><option value="">Generated background (this project)</option></select>
           </div>
           <div class="character-gen-actions">
-            <button id="buildStartFrame" class="button secondary" disabled>Build starting frame</button>
+            <button id="buildStartFrame" class="button secondary" disabled>Build starting frames</button>
           </div>
         </div>
         <div class="approval-bar">
