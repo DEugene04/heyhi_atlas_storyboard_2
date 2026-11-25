@@ -295,8 +295,13 @@ def test_openai_script_visual_selection_and_crop_use_structured_responses(tmp_pa
                 heading="Overview",
                 narration="Explain the source diagram.",
                 visual_direction="Point to the source visual.",
-                duration_s=10,
-            )
+            ),
+            review._AIScriptSection(
+                page=2,
+                heading="Details",
+                narration="Walk through the details.",
+                visual_direction="Point to the details.",
+            ),
         ],
         closing="Review the source.",
     )
@@ -355,6 +360,7 @@ def test_openai_script_visual_selection_and_crop_use_structured_responses(tmp_pa
     assert drafted.json()["mode"] == "openai"
     assert drafted.json()["model"] == "test-openai-model"
     assert responses.calls[0]["text_format"] is review._AIScript
+    assert [(x["page"], x["duration_s"]) for x in drafted.json()["sections"]] == [(1, 4), (2, 4)]
 
     selected = client.post(
         "/pdf-review/select-visuals",
@@ -457,8 +463,14 @@ def test_start_frame_can_use_an_image_library_background(tmp_path, monkeypatch) 
     assert missing.status_code == 404
 
 
+def _choose_voice(client, pid, monkeypatch, voice="voice_1"):
+    monkeypatch.setattr(review, "_voice_clients", lambda: (object(), object()))
+    assert client.post("/pdf-review/select-voice", json={"project_id": pid, "voice_id": voice}).status_code == 200
+
+
 def _scene_with_crop(client, pid, project, crop_size, monkeypatch):
     """Build frames, then run generate-scene with a crop of `crop_size`; return what H3 saw."""
+    _choose_voice(client, pid, monkeypatch)
     _write_png(project / "backgrounds/generated_background.png", (640, 360), (150, 110, 90))
     assert client.post("/pdf-review/compose-start-frame", json={"project_id": pid}).status_code == 200
     body = {"project_id": pid, "scene_id": "s1", "narration": "hi"}
@@ -481,6 +493,8 @@ def _scene_with_crop(client, pid, project, crop_size, monkeypatch):
 def test_scene_generation_starts_from_the_start_frame(tmp_path, monkeypatch) -> None:
     client, pid, project = _project_with_character(tmp_path, monkeypatch)
     body = {"project_id": pid, "scene_id": "s1", "narration": "hi"}
+    assert client.post("/pdf-review/generate-scene", json=body).status_code == 409   # no voice yet
+    _choose_voice(client, pid, monkeypatch)
     assert client.post("/pdf-review/generate-scene", json=body).status_code == 409   # no frame yet
 
     seen = _scene_with_crop(client, pid, project, None, monkeypatch)
@@ -534,3 +548,139 @@ def test_character_and_background_use_gpt_image(tmp_path, monkeypatch) -> None:
     assert r.status_code == 200, r.text
     assert (project / r.json()["background_path"]).is_file()
     assert [(a, refs) for a, _, refs in calls] == [("9:16", 0), ("9:16", 1), ("16:9", 0)]
+
+
+def test_narration_seconds_follow_word_count_like_studio() -> None:
+    assert review.narration_seconds("word " * 11) == 4        # 4.4 -> rounded down, floor of 4 s
+    assert review.narration_seconds("word " * 25) == 10
+    assert review.narration_seconds("word " * 29) == 11       # 11.6 -> 11
+    assert review.narration_seconds("word " * 90) == 15       # capped at H3's 15 s
+    assert review.narration_seconds("") == 4
+
+
+def test_ai_draft_is_retried_until_it_has_one_section_per_slide(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+
+    def section(page):
+        return review._AIScriptSection(page=page, heading="h", narration="word " * 25, visual_direction="v")
+
+    def script(*pages):
+        return review._AIScript(title="t", opening="o", sections=[section(p) for p in pages], closing="c")
+
+    class FakeResponses:
+        outputs = [script(1, 1, 2), script(1, 2)]            # first draft explains slide 1 twice
+
+        def parse(self, **kwargs):
+            return SimpleNamespace(output_parsed=self.outputs.pop(0))
+
+    monkeypatch.setattr(review, "_openai_client", lambda: SimpleNamespace(responses=FakeResponses()))
+    client = TestClient(app)
+    pid = client.post(
+        "/pdf-review/import-file?target_seconds=75&language=English",
+        files={"file": ("t.pdf", io.BytesIO(_pdf_bytes()), "application/pdf")},
+    ).json()["project_id"]
+    drafted = client.post("/pdf-review/draft-ai", json={
+        "project_id": pid, "selected_pages": [1, 2], "objective": "x",
+        "language": "English", "target_seconds": 75})
+    assert drafted.status_code == 200, drafted.text
+    assert [x["page"] for x in drafted.json()["sections"]] == [1, 2]
+    assert [x["duration_s"] for x in drafted.json()["sections"]] == [10, 10]
+
+
+def test_scene_is_voiced_trimmed_and_duration_comes_from_the_narration(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    _choose_voice(client, pid, monkeypatch, voice="v_abc")
+    _write_png(project / "backgrounds/generated_background.png", (640, 360), (150, 110, 90))
+    assert client.post("/pdf-review/compose-start-frame", json={"project_id": pid}).status_code == 200
+
+    seen = {}
+
+    class FakeH3:
+        def generate(self, prompt, image_paths, **kw):
+            seen["duration"] = kw["duration"]
+            return {"video_bytes": b"raw", "job_id": "j", "seed": 1, "turbo": False, "task": "t",
+                    "generation_seconds": 1.0, "request": {}, "record": {}}
+
+    import app.clients.video_minimax_h3_client as h3
+    monkeypatch.setattr(h3, "MinimaxH3Client", FakeH3)
+
+    def fake_voice(src, voice_id, run_dir, scene_id, sts, text, diarizer):
+        seen.update(voice=voice_id, text=text, src=src)
+        out = run_dir / "scenes" / f"{scene_id}.mp4"
+        out.parent.mkdir(exist_ok=True)
+        out.write_bytes(b"voiced")
+        return out
+
+    import app.pipeline.sts_elevenlabs as sts
+    monkeypatch.setattr(sts, "process_scene", fake_voice)
+
+    narration = "word " * 30                                      # 30 words / 2.5 = 12 s
+    r = client.post("/pdf-review/generate-scene",
+                    json={"project_id": pid, "scene_id": "s1", "narration": narration})
+    assert r.status_code == 200, r.text
+    assert seen["duration"] == 12                                 # not the old fixed 8
+    assert seen["voice"] == "v_abc"
+    assert r.json()["url"].endswith("/scenes/s1.mp4")
+    assert (project / "scenes/s1.mp4").read_bytes() == b"voiced"
+    manifest = json.loads((project / "videos.json").read_text())
+    assert manifest["s1"]["video_path"] == "scenes/s1.mp4" and manifest["s1"]["voice_id"] == "v_abc"
+
+
+def test_select_voice_rejects_empty(tmp_path, monkeypatch) -> None:
+    client, pid, _ = _project_with_character(tmp_path, monkeypatch)
+    assert client.post("/pdf-review/select-voice", json={"project_id": pid, "voice_id": " "}).status_code == 422
+
+
+def test_music_is_optional_and_render_stitches_scenes_with_transitions(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    (project / "script.local.json").write_text(json.dumps(
+        {"sections": [{"heading": "h", "narration": "n"}]}))
+    responses = SimpleNamespace(create=lambda **kw: SimpleNamespace(output_text="calm piano"))
+    monkeypatch.setattr(review, "_openai_client", lambda: SimpleNamespace(responses=responses))
+    r = client.post("/pdf-review/suggest-music-prompt", json={"project_id": pid})
+    assert r.json()["prompt"] == "calm piano"
+
+    captured = {}
+    import app.pipeline.renderer as renderer
+
+    def fake_render(run_dir, blueprint, subtitle_method="boxed", **kw):
+        captured.update(blueprint=blueprint, run_dir=run_dir)
+        return {"music": (run_dir / review.MUSIC_TRACK).is_file(), "font_warning": None}
+
+    monkeypatch.setattr(renderer, "render_merge_and_subs", fake_render)
+
+    ids = ["a", "b", "c"]
+    assert client.post("/pdf-review/render", json={"project_id": pid, "scene_ids": ids}).status_code == 409
+    manifest = {}
+    for sid in ids:
+        (project / "scenes").mkdir(exist_ok=True)
+        (project / f"scenes/{sid}.mp4").write_bytes(b"x")
+        manifest[sid] = {"video_path": f"scenes/{sid}.mp4", "inputs": {"narration": f"text {sid}"}}
+    (project / "videos.json").write_text(json.dumps(manifest))
+
+    r = client.post("/pdf-review/render", json={"project_id": pid, "scene_ids": ids})
+    assert r.status_code == 200, r.text
+    assert r.json()["music"] is False                              # music is optional
+    scenes = captured["blueprint"]["scenes"]
+    assert [s["text"] for s in scenes] == ["text a", "text b", "text c"]
+    assert [s["broll_role"] for s in scenes] == ["closing", "closing", None]   # a transition between scenes only
+
+
+def test_generate_music_from_a_prompt_and_drop_it(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    seen = {}
+
+    class FakeLyria:
+        def generate_music(self, spec):
+            seen["mood"] = spec.mood
+            return b"ID3" + b"\x00" * 64                       # already an mp3: written as is
+
+    monkeypatch.setattr(review, "_music_client", lambda: FakeLyria())
+    r = client.post("/pdf-review/generate-music", json={"project_id": pid, "prompt": " calm piano "})
+    assert r.status_code == 200, r.text
+    assert seen["mood"] == "calm piano"
+    assert (project / review.MUSIC_TRACK).is_file()
+    assert client.get(r.json()["music_url"]).status_code == 200
+
+    assert client.post("/pdf-review/remove-music", json={"project_id": pid}).status_code == 200
+    assert not (project / review.MUSIC_TRACK).exists()

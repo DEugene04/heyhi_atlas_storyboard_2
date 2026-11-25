@@ -64,11 +64,13 @@ def generate_run_music(
     *,
     duration_s: float | None = None,   # hint only; Lyria fixes ~30s
     instrumental: bool = True,
+    style: str | None = None,          # given directly by callers with no blueprint.music_style
 ) -> Path:
-    """Read bp.music_style, generate via Lyria, save run_0X/music_bg/track.mp3.
-    Returns the output path. One track per run (overwrites on re-run)."""
+    """Generate via Lyria from `style` (default: bp.music_style), save
+    run_0X/music_bg/track.mp3. Returns the output path. One track per run
+    (overwrites on re-run)."""
     run_dir = Path(run_dir)
-    style = _read_music_style(run_dir)
+    style = style or _read_music_style(run_dir)
 
     spec = MusicJobSpec(mood=style, instrumental=instrumental, duration_s=duration_s)
     audio, attempts = generate_with_retry(client, spec)

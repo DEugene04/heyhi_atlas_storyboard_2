@@ -195,12 +195,11 @@ function renderScript() {
     <article class="script-section" data-index="${index}">
       <div class="source-tag">SLIDE ${section.page}</div>
       <div class="narration-text">${escapeHtml(section.narration)}</div>
-      <div class="duration-box">SECONDS<input type="number" min="5" max="15" value="${section.duration_s}"></div>
+      <div class="duration-box" title="From the narration: words ÷ 2.5 per second, rounded down">SECONDS<input type="number" value="${section.duration_s}" readonly></div>
       <button class="regen-btn" data-index="${index}">Regenerate</button>
     </article>`).join("");
   $$(".script-section").forEach(card => {
     const index = Number(card.dataset.index);
-    $("input", card).addEventListener("input", event => { state.script.sections[index].duration_s = Number(event.target.value); syncRuntime(); });
     $(".regen-btn", card).addEventListener("click", () => toggleRegenForm(card, index));
   });
   syncRuntime();
@@ -253,7 +252,7 @@ function syncScriptGate(total) {
   const warning = $("#lengthWarning");
   warning.classList.toggle("hidden", !tooLong);
   if (tooLong) {
-    warning.textContent = `Total runtime is ${total} sec — it must be ${MAX_RUNTIME_SECONDS} seconds or less. Shorten section durations before continuing.`;
+    warning.textContent = `Total runtime is ${total} sec — it must be ${MAX_RUNTIME_SECONDS} seconds or less. Regenerate a section with shorter narration before continuing.`;
   }
   $("#toScenes").disabled = !$("#approveScript").checked || tooLong;
 }
@@ -497,6 +496,8 @@ function showCharacterPreview(url, prompt) {
     $("#characterPromptText").classList.remove("hidden");
   }
   $("#characterRegenPanel").classList.remove("hidden");
+  $("#voicePanel").classList.remove("hidden");
+  loadVoices();
   $("#characterGenStatus").textContent = "Generated · review required";
   $("#approveCharacter").checked = false;
   syncCharacterApproval();
@@ -608,6 +609,7 @@ function renderGeneration() {
       <button class="button secondary gen-one" data-scene="${scene.id}">${video ? "Regenerate" : "Generate"}</button>
     </article>`;
   }).join("");
+  syncRenderButton();
   $$(".gen-one").forEach(button => button.addEventListener("click", () => {
     const scene = state.scenes.find(item => item.id === button.dataset.scene);
     if (scene) generateOne(scene);
@@ -617,11 +619,11 @@ function renderGeneration() {
 function videoContract() {
   return {
     aspect_ratio: $("#specAspect").value,
-    duration_s: Math.max(4, Math.min(15, Number($("#specDuration").value) || 8)),
   };
 }
 
 async function generateOne(scene) {
+  if (!state.project.voice_id) { notice("Choose a presenter voice in step 05 first.", true); return false; }
   const contract = videoContract();
   showBusy(`Generating scene ${scene.id}`, "MiniMax H3 job — generating from the starting frame, then compositing the slide. This can take several minutes.");
   try {
@@ -631,7 +633,7 @@ async function generateOne(scene) {
       prompt: scene.prompt,
       narration: scene.narration,
       crop_path: scene.crop_path || "",
-      duration_s: contract.duration_s,
+      duration_s: scene.duration_s,       // from the narration, set when the script was drafted
       aspect_ratio: contract.aspect_ratio,
       turbo: $("#turboToggle").checked,
     });
@@ -645,6 +647,34 @@ async function generateOne(scene) {
     return false;
   } finally { hideBusy(); }
 }
+
+// --- Voice (ElevenLabs speech-to-speech, one per project) ---
+let voices = null;
+async function loadVoices() {
+  if (voices) return;
+  try {
+    voices = await api("/voices");
+    const select = $("#voiceSelect");
+    select.length = 1;
+    select.options[0].textContent = "Choose a voice…";
+    for (const v of voices) {
+      select.add(new Option(`${v.name} · ${v.gender}${v.languages?.length ? ` · ${v.languages.join(", ")}` : ""}`, v.voice_id));
+    }
+  } catch (error) { $("#voiceStatus").textContent = `Voice list failed: ${error.message}`; }
+}
+
+$("#voiceSelect").addEventListener("change", async event => {
+  const voice = (voices || []).find(v => v.voice_id === event.target.value);
+  const preview = $("#voicePreview");
+  preview.classList.toggle("hidden", !voice?.preview_url);
+  if (voice?.preview_url) preview.src = voice.preview_url;
+  if (!voice) { state.project.voice_id = ""; return; }
+  try {
+    await jsonPost("/select-voice", { project_id: state.project.project_id, voice_id: voice.voice_id, voice_name: voice.name });
+    state.project.voice_id = voice.voice_id;
+    $("#voiceStatus").textContent = `Voice saved: ${voice.name}`;
+  } catch (error) { notice(error.message, true); }
+});
 
 // Image-library backgrounds; the first option ("") is the project's generated background.
 async function loadBackgroundOptions() {
@@ -664,6 +694,11 @@ function resetBackgroundPanel() {
   clearStartFrames();
   syncStartFrameButton();
   loadBackgroundOptions().catch(() => {});
+  $("#voicePanel").classList.add("hidden");
+  $("#voiceSelect").value = "";
+  $("#voicePreview").classList.add("hidden");
+  $("#voiceStatus").textContent = "";
+  resetFinalPanel();
 }
 loadBackgroundOptions().catch(() => {});
 
@@ -683,3 +718,59 @@ $("#generateAll").addEventListener("click", async () => {
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 }
+
+// --- Music (optional) and the final stitched video ---
+function syncRenderButton() {
+  const ready = state.scenes.length > 0 && state.scenes.every(scene => state.videos.has(scene.id));
+  $("#renderFinal").disabled = !ready;
+}
+
+function resetFinalPanel() {
+  $("#musicPrompt").value = "";
+  $("#musicPreview").classList.add("hidden");
+  $("#dropMusic").classList.add("hidden");
+  $("#finalVideo").classList.add("hidden");
+  $("#renderStatus").textContent = "";
+}
+
+$("#suggestMusicPrompt").addEventListener("click", async () => {
+  showBusy("Writing music prompt", "OpenAI reads the script and describes a fitting instrumental track.");
+  try {
+    const data = await jsonPost("/suggest-music-prompt", { project_id: state.project.project_id });
+    $("#musicPrompt").value = data.prompt;
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+});
+
+$("#generateMusic").addEventListener("click", async () => {
+  const prompt = $("#musicPrompt").value.trim();
+  if (!prompt) { notice("Write or suggest a music prompt first, or skip music.", true); return; }
+  showBusy("Generating music", "Lyria is composing the background track. This may take a minute.");
+  try {
+    const data = await jsonPost("/generate-music", { project_id: state.project.project_id, prompt });
+    const audio = $("#musicPreview");
+    audio.src = `${data.music_url}?v=${Date.now()}`;
+    audio.classList.remove("hidden");
+    $("#dropMusic").classList.remove("hidden");
+    notice("Music generated. It will be mixed in when you render.");
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+});
+
+$("#dropMusic").addEventListener("click", async () => {
+  try {
+    await jsonPost("/remove-music", { project_id: state.project.project_id });
+    $("#musicPreview").classList.add("hidden");
+    $("#dropMusic").classList.add("hidden");
+    notice("Music removed. The video will have voice only.");
+  } catch (error) { notice(error.message, true); }
+});
+
+$("#renderFinal").addEventListener("click", async () => {
+  showBusy("Rendering final video", "Merging scenes, adding transitions, subtitles and music. Local ffmpeg; no credits are used.");
+  try {
+    const data = await jsonPost("/render", { project_id: state.project.project_id, scene_ids: state.scenes.map(scene => scene.id) });
+    const video = $("#finalVideo");
+    video.src = `${data.final_url}?v=${Date.now()}`;
+    video.classList.remove("hidden");
+    $("#renderStatus").textContent = `Final video ready${data.music ? " · with music" : " · no music"}.${data.font_warning ? ` Warning: ${data.font_warning}` : ""}`;
+  } catch (error) { notice(error.message, true); } finally { hideBusy(); }
+});

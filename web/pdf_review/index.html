@@ -157,6 +157,13 @@
             </div>
           </div>
         </div>
+        <div id="voicePanel" class="panel character-gen-panel hidden">
+          <h4>Presenter voice</h4>
+          <p class="hint">Each scene's speech is converted to this ElevenLabs voice (speech-to-speech) so the voice stays the same in every scene. Required before generating videos.</p>
+          <div class="field"><label for="voiceSelect">Voice</label><select id="voiceSelect"><option value="">Loading voices…</option></select></div>
+          <audio id="voicePreview" controls preload="none" class="hidden"></audio>
+          <p id="voiceStatus" class="hint"></p>
+        </div>
         <div class="panel character-gen-panel">
           <h4>Background &amp; starting frame</h4>
           <p class="hint">A background is generated from the script. The starting frame places the approved character on the left of the background with a flat green rectangle on the right (a landscape one and a portrait one, chosen automatically per slide image), built from the exact character and background pixels (no re-drawing). Every scene video starts from the matching frame, so build them before generating videos.</p>
@@ -201,7 +208,7 @@
               <div class="spec-row"><label for="specMode">Mode</label><span>reference (green-screen + composite)</span></div>
               <div class="spec-row"><label for="specResolution">Resolution</label><span>768p · 24 fps</span></div>
               <div class="spec-row"><label for="specAspect">Aspect ratio</label><select id="specAspect"><option value="16:9" selected>16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option></select></div>
-              <div class="spec-row"><label for="specDuration">Duration (sec)</label><input id="specDuration" type="number" min="4" max="15" value="8"></div>
+              <div class="spec-row"><label>Duration</label><span>Per scene, from the narration (words ÷ 2.5 per second)</span></div>
               <div class="spec-row"><label for="specAudio">Audio</label><span>Generated with the video</span></div>
             </div>
           </div>
@@ -216,6 +223,22 @@
           <div class="field"><label for="turboToggle"><input id="turboToggle" type="checkbox"> Turbo mode <em>4 steps + speed LoRA · faster, A/B against normal</em></label></div>
           <div id="genStatus" class="gen-status"></div>
           <div id="genList" class="gen-list"></div>
+        </div>
+        <div class="generation-panel" id="finalPanel">
+          <div class="gen-head">
+            <div><strong>Music &amp; final video</strong><p>When every scene is generated, stitch them into one video: a transition over each cut between scenes, subtitles, and background music if you add it. Rendering is local and free.</p></div>
+          </div>
+          <div class="field"><label for="musicPrompt">Background music <em>optional · written from the script by OpenAI, made by Lyria (about 30 s, looped under the video)</em></label>
+            <textarea id="musicPrompt" rows="3" placeholder="Leave empty for no music, or click Suggest prompt"></textarea></div>
+          <div class="input-action">
+            <button id="suggestMusicPrompt" class="button secondary">Suggest prompt from script</button>
+            <button id="generateMusic" class="button secondary">Generate music</button>
+            <button id="dropMusic" class="button secondary hidden">Remove music</button>
+          </div>
+          <audio id="musicPreview" controls preload="none" class="hidden"></audio>
+          <div class="gen-head"><button id="renderFinal" class="button primary" disabled>Render final video</button></div>
+          <div id="renderStatus" class="gen-status"></div>
+          <video id="finalVideo" controls preload="metadata" class="hidden" style="width:100%;max-width:720px"></video>
         </div>
       </section>
     </main>
