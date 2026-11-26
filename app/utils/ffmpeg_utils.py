@@ -27,19 +27,43 @@ def _require(bin_name: str) -> str:
 _STD_FLAGS = ("-y", "-hide_banner", "-loglevel", "error")
 
 
+# Longest one ffmpeg command may run. Every pass in the pipeline finishes in well
+# under a minute on a healthy machine; a command that exceeds this is stuck (ffmpeg
+# can spin at 100% CPU after writing its output without ever exiting), and without a
+# limit the request waiting on it never returns.
+DEFAULT_TIMEOUT_S = 600.0
+
+
+def _default_timeout() -> float:
+    raw = os.environ.get("ATLAS_FFMPEG_TIMEOUT_S", "")
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_TIMEOUT_S
+    return value if value > 0 else DEFAULT_TIMEOUT_S
+
+
 def run_ffmpeg(args: list, *, expect: str | Path | None = None,
                cwd: str | Path | None = None, input: bytes | None = None,
                flags: tuple[str, ...] = _STD_FLAGS, check: bool = True,
-               label: str = "ffmpeg") -> subprocess.CompletedProcess:
+               label: str = "ffmpeg",
+               timeout: float | None = None) -> subprocess.CompletedProcess:
     """Run one ffmpeg command.
 
-    Raises FfmpegError if ffmpeg fails or the expected output file is missing.
-    Set check=False to return the CompletedProcess without validation.
+    Raises FfmpegError if ffmpeg fails, the expected output file is missing, or the
+    command runs longer than `timeout` seconds (default: ATLAS_FFMPEG_TIMEOUT_S, else
+    600); on a timeout the process is killed first. Set check=False to return the
+    CompletedProcess without validating the exit code or output; a timeout still raises.
     """
+    limit = timeout if timeout is not None else _default_timeout()
     cmd = [_require("ffmpeg"), *flags, *[str(a) for a in args]]
-    proc = subprocess.run(cmd, capture_output=True, input=input,
-                          text=input is None,
-                          cwd=str(cwd) if cwd is not None else None)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, input=input,
+                              text=input is None,
+                              cwd=str(cwd) if cwd is not None else None,
+                              timeout=limit)
+    except subprocess.TimeoutExpired:
+        raise FfmpegError(f"{label} timed out after {limit:g}s and was killed")
     if not check:
         return proc
     if proc.returncode != 0 or (expect is not None and not Path(expect).is_file()):

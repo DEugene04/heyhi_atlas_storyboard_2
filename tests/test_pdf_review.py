@@ -714,3 +714,102 @@ def test_scene_prompt_uses_the_project_language(tmp_path, monkeypatch) -> None:
     (project / "project.json").write_text(json.dumps(data))
     seen = _scene_with_crop(client, pid, project, None, monkeypatch)
     assert "<d>[Thai] hi</d>" in seen["prompt"]
+
+
+# --- opening an existing project (the Studio "continue a previous run" equivalent) ---
+
+def _import_project(client) -> str:
+    imported = client.post(
+        "/pdf-review/import-file?target_seconds=75&language=English",
+        files={"file": ("training.pdf", io.BytesIO(_pdf_bytes()), "application/pdf")},
+    )
+    assert imported.status_code == 200
+    return imported.json()["project_id"]
+
+
+def test_projects_list_is_empty_without_projects(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    assert TestClient(app).get("/pdf-review/projects").json() == []
+
+
+def test_a_project_is_reopened_at_the_step_it_reached(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    client = TestClient(app)
+    project_id = _import_project(client)
+
+    state = client.get("/pdf-review/state", params={"project_id": project_id}).json()
+    assert state["stage"] == "source"
+    assert state["project"]["page_count"] == 2          # the same payload import returned
+    assert state["script"] is None and state["preflight"] is None and state["crops"] == []
+    assert state["character_url"] is None and state["videos"] == {} and state["final_url"] is None
+
+    client.post("/pdf-review/draft-local", json={
+        "project_id": project_id, "selected_pages": [1, 2], "objective": "Explain the deck",
+        "language": "English", "target_seconds": 75})
+    state = client.get("/pdf-review/state", params={"project_id": project_id}).json()
+    assert state["stage"] == "script"
+    assert [s["page"] for s in state["script"]["sections"]] == [1, 2]
+    assert state["title"] == "Explain the deck"
+
+    client.post("/pdf-review/apply-crops", json={"project_id": project_id, "crops": [
+        {"page": 1, "x": 0.05, "y": 0.05, "width": 0.9, "height": 0.9, "label": "Overview"}]})
+    state = client.get("/pdf-review/state", params={"project_id": project_id}).json()
+    assert state["stage"] == "crops"
+    assert state["crops"][0]["crop_path"] == "crops/slide_001.png"
+
+    scene = {"id": "scene_01", "page": 1, "duration_s": 8, "narration": "Welcome.",
+             "prompt": "Presenter speaks.", "crop_path": "crops/slide_001.png"}
+    client.post("/pdf-review/preflight", json={"project_id": project_id, "scenes": [scene]})
+    state = client.get("/pdf-review/state", params={"project_id": project_id}).json()
+    assert state["stage"] == "preflight"
+    assert state["preflight"]["scenes"][0]["id"] == "scene_01"
+
+
+def test_generated_scenes_music_and_final_video_are_reopened(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    client = TestClient(app)
+    project_id = _import_project(client)
+    project = tmp_path / project_id
+    scene = {"id": "scene_01", "page": 1, "duration_s": 8, "narration": "Welcome.",
+             "prompt": "Presenter speaks.", "crop_path": ""}
+    client.post("/pdf-review/preflight", json={"project_id": project_id, "scenes": [scene]})
+
+    (project / "scenes").mkdir()
+    (project / "scenes" / "scene_01.mp4").write_bytes(b"video")
+    (project / "videos.json").write_text(json.dumps({
+        "scene_01": {"video_path": "scenes/scene_01.mp4", "url": f"/pdf-review/files/{project_id}/scenes/scene_01.mp4",
+                     "job_id": "j1", "turbo": False, "seed": 7, "generation_seconds": 41.0, "composited": True,
+                     "inputs": {"narration": "Welcome."}},
+        "scene_02": {"video_path": "scenes/scene_02.mp4", "url": "gone", "inputs": {"narration": "x"}},
+    }), encoding="utf-8")
+
+    state = client.get("/pdf-review/state", params={"project_id": project_id}).json()
+    assert state["stage"] == "scenes 1/1"
+    assert list(state["videos"]) == ["scene_01"]        # scene_02's file is gone, so it is not offered
+    assert state["videos"]["scene_01"]["seed"] == 7
+
+    (project / "music_bg").mkdir()
+    (project / "music_bg" / "track.mp3").write_bytes(b"audio")
+    (project / "final.mp4").write_bytes(b"final")
+    state = client.get("/pdf-review/state", params={"project_id": project_id}).json()
+    assert state["stage"] == "rendered"
+    assert state["music_url"].endswith("music_bg/track.mp3")
+    assert state["final_url"].endswith("final.mp4")
+
+
+def test_projects_list_is_newest_first_and_skips_unfinished_imports(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    client = TestClient(app)
+    older, newer = _import_project(client), _import_project(client)
+    (tmp_path / "pdf_00000000").mkdir()                  # created, but extraction never finished
+    import os
+    os.utime(tmp_path / older, (1, 1))
+
+    listed = client.get("/pdf-review/projects").json()
+    assert [p["project_id"] for p in listed] == [newer, older]
+    assert listed[0]["stage"] == "source" and listed[0]["updated"] > listed[1]["updated"]
+
+
+def test_state_of_an_unknown_project_is_404(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(review, "PROJECT_ROOT", tmp_path.resolve())
+    assert TestClient(app).get("/pdf-review/state", params={"project_id": "pdf_deadbeef"}).status_code == 404

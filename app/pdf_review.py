@@ -1347,13 +1347,21 @@ def preflight(body: PreflightIn) -> dict[str, Any]:
     return manifest
 
 
-def _load_script(project: Path) -> dict[str, Any]:
-    """Return the latest script (OpenAI or local fallback)."""
+def _saved_script(project: Path) -> dict[str, Any] | None:
+    """The latest script (OpenAI, else local), or None when none has been drafted."""
     for name in ("script.openai.json", "script.local.json"):
         path = project / name
         if path.is_file():
             return json.loads(path.read_text(encoding="utf-8"))
-    raise HTTPException(409, "no script has been drafted yet")
+    return None
+
+
+def _load_script(project: Path) -> dict[str, Any]:
+    """Return the latest script (OpenAI or local fallback)."""
+    script = _saved_script(project)
+    if script is None:
+        raise HTTPException(409, "no script has been drafted yet")
+    return script
 
 
 @router.post("/generate-character")
@@ -1873,10 +1881,8 @@ def render_video(body: RenderIn) -> dict[str, Any]:
     project, data = _load_project(body.project_id)
     from app.pipeline.renderer import RenderError, render_merge_and_subs
 
-    manifest_path = project / "videos.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {}
-    missing = [sid for sid in body.scene_ids
-               if sid not in manifest or not (project / manifest[sid]["video_path"]).is_file()]
+    videos = _saved_videos(project)
+    missing = [sid for sid in body.scene_ids if sid not in videos]
     if missing:
         raise HTTPException(409, f"scenes not generated yet: {missing}")
 
@@ -1885,7 +1891,7 @@ def render_video(body: RenderIn) -> dict[str, Any]:
         "scenes": [
             {
                 "id": sid,
-                "text": manifest[sid]["inputs"]["narration"],
+                "text": videos[sid]["inputs"]["narration"],
                 # "closing" puts a transition on the cut after this scene
                 "broll_role": "closing" if i < last else None,
             }
@@ -1907,3 +1913,104 @@ def render_video(body: RenderIn) -> dict[str, Any]:
         "music": result["music"],
         "font_warning": result.get("font_warning"),
     }
+
+
+# ----------------------------------------------------------------------
+# Opening an existing project, as Studio opens an existing run (/pipeline/runs and
+# /pipeline/status): nothing extra is stored. Everything the UI shows is rebuilt from
+# the files each step already wrote, so a project can be reopened after a restart and
+# any step tweaked without starting over.
+# ----------------------------------------------------------------------
+def _read_json(path: Path, default: Any) -> Any:
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else default
+
+
+def _file_url(project: Path, relative: str | None) -> str | None:
+    """URL of a project file, or None if the step has not written it (or it was deleted)."""
+    if not relative or not (project / relative).is_file():
+        return None
+    return f"/pdf-review/files/{project.name}/{relative}"
+
+
+def _saved_videos(project: Path) -> dict[str, dict[str, Any]]:
+    """Generated scenes whose voiced video is still on disk, keyed by scene id."""
+    manifest = _read_json(project / "videos.json", {})
+    return {sid: entry for sid, entry in manifest.items()
+            if (project / entry["video_path"]).is_file()}
+
+
+def _project_state(project: Path, data: dict[str, Any]) -> dict[str, Any]:
+    script = _saved_script(project)
+    preflight = _read_json(project / "preflight.json", None)
+    crops = _read_json(project / "crops.json", [])
+    videos = _saved_videos(project)
+    character_url = _file_url(project, data.get("character_path"))
+    final_url = _file_url(project, "final.mp4")
+    planned = [scene["id"] for scene in preflight["scenes"]] if preflight else []
+    generated = sum(scene_id in videos for scene_id in planned)    # videos.json can hold leftovers
+
+    if final_url:
+        stage = "rendered"
+    elif generated:
+        stage = f"scenes {generated}/{len(planned)}"
+    elif preflight:
+        stage = "preflight"
+    elif character_url:
+        stage = "character"
+    elif crops:
+        stage = "crops"
+    elif script:
+        stage = "script"
+    else:
+        stage = "source"
+
+    start_frames = {}
+    for orientation, frame in (data.get("start_frames") or {}).items():
+        url = _file_url(project, frame["path"])
+        if url:
+            start_frames[orientation] = {**frame, "url": url}
+
+    return {
+        "project": data,
+        "stage": stage,
+        "title": (script or {}).get("title") or data["slides"][0]["title"],
+        "script": script,
+        "preflight": preflight,      # the approved scene plan and request; None before step 06
+        "crops": crops,
+        "character_url": character_url,
+        "background_url": _file_url(project, data.get("background_path")),
+        "start_frames": start_frames,
+        "videos": {
+            sid: {
+                "url": entry["url"], "job_id": entry.get("job_id"), "task": entry.get("task"),
+                "composited": entry.get("composited"), "turbo": entry.get("turbo"),
+                "seed": entry.get("seed"), "generation_seconds": entry.get("generation_seconds"),
+            }
+            for sid, entry in videos.items()
+        },
+        "music_url": _file_url(project, MUSIC_TRACK),
+        "final_url": final_url,
+    }
+
+
+@router.get("/projects")
+def list_projects() -> list[dict[str, Any]]:
+    """Every project that finished importing, newest first."""
+    if not PROJECT_ROOT.is_dir():
+        return []
+    projects = [p for p in PROJECT_ROOT.iterdir()
+                if p.is_dir() and PROJECT_RE.fullmatch(p.name) and (p / "project.json").is_file()]
+    projects.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    out = []
+    for p in projects:
+        state = _project_state(p, json.loads((p / "project.json").read_text(encoding="utf-8")))
+        out.append({"project_id": p.name, "stage": state["stage"], "title": state["title"],
+                    "updated": int(p.stat().st_mtime)})
+    return out
+
+
+@router.get("/state")
+def project_state(project_id: str) -> dict[str, Any]:
+    """Everything saved for one project, to rebuild the UI at the step it reached."""
+    project, data = _load_project(project_id)
+    return _project_state(project, data)

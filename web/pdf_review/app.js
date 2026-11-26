@@ -90,18 +90,10 @@ async function importSource(mode) {
       });
       data = await api(`/import-file?${params}`, { method: "POST", body: form });
     }
-    state.project = data;
-    state.selected = new Set(data.recommended_pages);
-    state.script = null;
-    state.scenes = [];
-    state.visualChoices.clear();
-    state.visualSelected.clear();
-    state.crops.clear();
-    state.cropResults.clear();
-    state.videos.clear();
-    renderSource();
-    resetBackgroundPanel();
+    startProject(data, new Set(data.recommended_pages));
+    remember(data.project_id);
     await maybeUploadCharacter(data.project_id);
+    loadProjects();
     notice(`${data.page_count} slides extracted. Review the recommended scope before continuing.`);
   } catch (error) {
     notice(error.message, true);
@@ -260,9 +252,14 @@ function syncScriptGate(total) {
 $("#approveScript").addEventListener("change", () => syncScriptGate());
 $("#toScenes").addEventListener("click", () => {
   state.script.title = $("#scriptTitle").value.trim();
-  // Step 03 is automated and never shown: scenes are built verbatim from the approved script,
-  // then the flow jumps straight into Step 04 (source visuals).
-  state.scenes = state.script.sections.map((section, index) => ({
+  state.scenes = buildScenes();
+  enterCrops();
+});
+
+// Step 03 is automated and never shown: scenes are built verbatim from the approved script,
+// then the flow jumps straight into Step 04 (source visuals).
+function buildScenes() {
+  return state.script.sections.map((section, index) => ({
     id: `scene_${String(index + 1).padStart(2, "0")}`,
     page: section.page,
     duration_s: Number(section.duration_s),
@@ -270,8 +267,7 @@ $("#toScenes").addEventListener("click", () => {
     prompt: section.visual_direction || "A professional presenter stands to the left of a large display, speaking to camera and naturally gesturing toward the approved source visual on the right. Preserve the source visual faithfully and keep all labels legible.",
     crop_path: "",
   }));
-  enterCrops();
-});
+}
 
 // enterCrops() is the Step 04 entry. It used to sit behind the (now hidden) Step 03
 // "Review source visuals" button; the automated script step calls it directly.
@@ -663,11 +659,15 @@ async function loadVoices() {
   } catch (error) { $("#voiceStatus").textContent = `Voice list failed: ${error.message}`; }
 }
 
-$("#voiceSelect").addEventListener("change", async event => {
-  const voice = (voices || []).find(v => v.voice_id === event.target.value);
+function previewVoice(voice) {
   const preview = $("#voicePreview");
   preview.classList.toggle("hidden", !voice?.preview_url);
   if (voice?.preview_url) preview.src = voice.preview_url;
+}
+
+$("#voiceSelect").addEventListener("change", async event => {
+  const voice = (voices || []).find(v => v.voice_id === event.target.value);
+  previewVoice(voice);
   if (!voice) { state.project.voice_id = ""; return; }
   try {
     await jsonPost("/select-voice", { project_id: state.project.project_id, voice_id: voice.voice_id, voice_name: voice.name });
@@ -774,3 +774,206 @@ $("#renderFinal").addEventListener("click", async () => {
     $("#renderStatus").textContent = `Final video ready${data.music ? " · with music" : " · no music"}.${data.font_warning ? ` Warning: ${data.font_warning}` : ""}`;
   } catch (error) { notice(error.message, true); } finally { hideBusy(); }
 });
+
+// --- Opening an existing project (Studio's "continue a previous run") ---
+// Every step already saves its result in the project folder. /state returns all of it and
+// the UI is rebuilt from that, so a project can be reopened and any step tweaked without
+// importing the PDF again or repeating a paid step.
+const LAST_PROJECT_KEY = "atlas_pdf_review_project";
+
+function remember(projectId) {
+  try { projectId ? localStorage.setItem(LAST_PROJECT_KEY, projectId) : localStorage.removeItem(LAST_PROJECT_KEY); } catch { /* storage blocked */ }
+}
+
+async function loadProjects() {
+  const picker = $("#projectPicker");
+  try {
+    const projects = await api("/projects");
+    picker.replaceChildren(
+      new Option(projects.length ? "Choose a project…" : "No previous projects", ""),
+      ...projects.map(item => new Option(`${item.project_id} · ${item.title} · ${item.stage}`, item.project_id)));
+    if (projects.some(item => item.project_id === state.project?.project_id)) picker.value = state.project.project_id;
+  } catch (error) { notice(`Could not list projects: ${error.message}`, true); }
+}
+
+// A different project is now in view: drop everything the previous one left on screen.
+function startProject(project, selected) {
+  state.project = project;
+  state.selected = selected;
+  state.script = null;
+  state.scenes = [];
+  state.visualChoices.clear();
+  state.visualSelected.clear();
+  state.crops.clear();
+  state.cropResults.clear();
+  state.videos.clear();
+  $$(".nav-step").forEach(button => { button.disabled = Number(button.dataset.step) !== 1; });
+  $("#approveSource").checked = false;
+  $("#scriptEditor").classList.add("hidden");
+  $("#scriptEmpty").classList.remove("hidden");
+  $("#scriptStatus").textContent = "Not drafted";
+  $("#approveScript").checked = false;
+  $("#cropWorkspace").classList.add("hidden");
+  $("#cropStatus").textContent = "Visual selection required";
+  $("#approveCrops").checked = false;
+  $("#toPreflight").disabled = true;
+  $("#characterPreviewImg").classList.add("hidden");
+  $("#characterPlaceholder").classList.remove("hidden");
+  $("#characterPromptText").classList.add("hidden");
+  $("#characterRegenPanel").classList.add("hidden");
+  $("#characterGenStatus").textContent = "Not generated";
+  $("#approveCharacter").checked = false;
+  syncCharacterApproval();
+  $("#manifestJson").textContent = "Preparing manifest…";
+  $("#finalCropPreview").removeAttribute("src");
+  $("#displayPlaceholder").classList.remove("hidden");
+  $("#genList").replaceChildren();
+  $("#genStatus").textContent = "";
+  renderSource();
+  resetBackgroundPanel();
+}
+
+function applySettings(saved) {
+  if (saved.objective) $("#objective").value = saved.objective;
+  if (saved.language) $("#language").value = saved.language;
+  if (saved.target_seconds) {
+    $("#duration").value = String(saved.target_seconds);
+    $("#heroDuration").textContent = `${saved.target_seconds} sec`;
+  }
+  $("#avatarUrl").value = saved.avatar_url || "";
+}
+
+function restoreCrops(crops) {
+  crops.forEach(crop => {
+    state.crops.set(crop.page, { page: crop.page, x: crop.x, y: crop.y, width: crop.width, height: crop.height, label: crop.label });
+    state.cropResults.set(crop.page, crop);
+  });
+  state.visualSelected = new Set(state.crops.keys());
+  // A scene whose own slide has no crop uses the first one, as confirmVisuals does. Scenes
+  // from the saved preflight already carry both fields.
+  state.scenes.forEach(scene => {
+    scene.visual_page ??= state.crops.has(scene.page) ? scene.page : crops[0].page;
+    scene.crop_path ||= state.cropResults.get(scene.visual_page)?.crop_path || "";
+  });
+  $("#cropWorkspace").classList.remove("hidden");
+  renderCrops();
+  $("#cropStatus").textContent = `${state.crops.size} previews restored`;
+  $("#approveCrops").checked = true;
+  syncCropApproval();
+}
+
+async function restoreProject(saved) {
+  const { project } = saved;
+  applySettings(project.settings || {});
+  startProject(project, new Set(saved.script ? saved.script.sections.map(section => section.page) : project.recommended_pages));
+  let step = 1;
+
+  if (saved.script) {
+    $("#approveSource").checked = true;      // the slides were reviewed to get a script
+    syncSelected();
+    state.script = saved.script;
+    renderScript();
+    unlock(2);
+    step = 2;
+  }
+
+  // Steps past the script open only once their own output exists, so a project reopens at
+  // the step it reached and never re-runs a paid step on the way.
+  const plan = saved.preflight?.scenes;
+  if (saved.script && (plan || saved.crops.length)) {
+    state.scenes = plan || buildScenes();
+    $("#approveScript").checked = true;
+    syncScriptGate();
+    unlock(4);
+  }
+  if (saved.crops.length) {
+    restoreCrops(saved.crops);
+    unlock(5);
+    step = 5;
+  }
+
+  if (saved.character_url) {
+    showCharacterPreview(saved.character_url, project.character_prompt);
+    await loadVoices();
+    if (project.voice_id) {
+      $("#voiceSelect").value = project.voice_id;
+      previewVoice((voices || []).find(voice => voice.voice_id === project.voice_id));
+      $("#voiceStatus").textContent = `Voice saved: ${project.voice_name || project.voice_id}`;
+    }
+  }
+  if (saved.background_url) {
+    showImage("#backgroundPreviewImg", "#backgroundPlaceholder", saved.background_url);
+    if (project.background_prompt) {
+      $("#backgroundPromptText").textContent = `Prompt: ${project.background_prompt}`;
+      $("#backgroundPromptText").classList.remove("hidden");
+    }
+  }
+  for (const [orientation, frame] of Object.entries(saved.start_frames)) {
+    const name = orientation === "portrait" ? "Portrait" : "Landscape";
+    showImage(`#startFrame${name}Img`, `#startFrame${name}Placeholder`, frame.url);
+    $(`#startFrame${name}Info`).textContent = `· green panel ${frame.panel.w}×${frame.panel.h}`;
+  }
+  await loadBackgroundOptions().catch(() => {});
+  if (project.start_frame_background && project.start_frame_background !== "generated") {
+    $("#backgroundSelect").value = project.start_frame_background;
+  }
+  syncStartFrameButton();
+
+  if (saved.preflight) {
+    $("#manifestJson").textContent = JSON.stringify(saved.preflight, null, 2);
+    const first = [...state.cropResults.values()][0];
+    if (first) {
+      $("#finalCropPreview").src = first.url;
+      $("#displayPlaceholder").classList.add("hidden");
+    }
+    $("#approveCharacter").checked = true;
+    syncCharacterApproval();
+    for (const [sceneId, video] of Object.entries(saved.videos)) {
+      state.videos.set(sceneId, { url: video.url, task: video.task, jobId: video.job_id, composited: video.composited,
+        turbo: video.turbo, seconds: video.generation_seconds, seed: video.seed });
+    }
+    renderGeneration();
+    unlock(6);
+    step = 6;
+  }
+
+  $("#musicPrompt").value = project.music_prompt || "";
+  if (saved.music_url) {
+    const audio = $("#musicPreview");
+    audio.src = `${saved.music_url}?v=${Date.now()}`;
+    audio.classList.remove("hidden");
+    $("#dropMusic").classList.remove("hidden");
+  }
+  if (saved.final_url) {
+    const video = $("#finalVideo");
+    video.src = `${saved.final_url}?v=${Date.now()}`;
+    video.classList.remove("hidden");
+    $("#renderStatus").textContent = "Final video ready.";
+  }
+  go(step);
+}
+
+async function openProject(projectId) {
+  showBusy("Opening project", "Loading everything saved for this project. No AI or video call is made.");
+  try {
+    const saved = await api(`/state?project_id=${encodeURIComponent(projectId)}`);
+    await restoreProject(saved);
+    remember(projectId);
+    await loadProjects();
+    notice(`Opened ${projectId} (${saved.stage}).`);
+    return true;
+  } catch (error) {
+    notice(`Could not open ${projectId}: ${error.message}`, true);
+    return false;
+  } finally { hideBusy(); }
+}
+
+$("#openProject").addEventListener("click", () => { const id = $("#projectPicker").value; if (id) openProject(id); });
+
+(async function boot() {
+  let last = null;
+  try { last = localStorage.getItem(LAST_PROJECT_KEY); } catch { /* storage blocked */ }
+  if (last && await openProject(last)) return;
+  if (last) remember(null);          // that project is gone; do not retry it on every load
+  loadProjects();
+})();
