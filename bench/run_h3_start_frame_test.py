@@ -27,6 +27,7 @@ from app.utils.start_frame import compose_start_frame, cut_out_character, verify
 
 # ----------------------------- SETTINGS -----------------------------
 NARRATION = "Welcome to the safety briefing. Today we cover three key rules."
+LANGUAGE = "English"                  # e.g. "Thai", "Indonesian": names the spoken language to H3
 CHARACTER_IMAGE = Path("_storage/image_library/Character2.png")
 BACKGROUND_IMAGE = Path("_storage/image_library/background2.jpeg")
 DURATION_S = 6                        # 4-15; the GPU is shared
@@ -37,7 +38,7 @@ TURBO = False                         # keep False: turbo changes quality, which
 OUT_DIR = Path("_storage/h3/start_frame_test")
 # --------------------------------------------------------------------
 
-prompt = first_frame_scene_prompt(NARRATION)
+prompt = first_frame_scene_prompt(NARRATION, LANGUAGE)
 
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 frame_path = OUT_DIR / "start_frame.png"

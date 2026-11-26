@@ -684,3 +684,33 @@ def test_generate_music_from_a_prompt_and_drop_it(tmp_path, monkeypatch) -> None
 
     assert client.post("/pdf-review/remove-music", json={"project_id": pid}).status_code == 200
     assert not (project / review.MUSIC_TRACK).exists()
+
+
+def test_h3_prompt_names_the_spoken_language() -> None:
+    from app.utils.presenter_prompt import first_frame_scene_prompt, language_name
+    thai = first_frame_scene_prompt("สวัสดีครับ", "Thai")
+    assert "<d>[Thai] สวัสดีครับ</d>" in thai and "professional Thai" in thai
+    indo = first_frame_scene_prompt("Selamat pagi", "Bahasa Indonesia")
+    assert "<d>[Indonesian] Selamat pagi</d>" in indo
+    assert "<d>[en] hi</d>" in first_frame_scene_prompt("hi")          # English is unchanged
+    assert language_name("Bahasa Malaysia") == "Bahasa Malaysia"        # not mistaken for Indonesian
+    assert language_name("ภาษาไทย") == "Thai"
+
+
+def test_thai_is_timed_in_characters_and_indonesian_in_words() -> None:
+    thai = "ก" * 60                                   # no spaces: one "word", 60 characters
+    assert review.narration_seconds(thai, "Thai") == 6            # 60 / 10
+    assert review.narration_seconds(thai, "English") == 4         # word count would floor it at 4 s
+    assert review.narration_seconds("kata " * 25, "Indonesian") == 10
+    assert review.max_narration_units("Thai") == 150 and review.max_narration_units("Indonesian") == 37
+    assert len(review.clip_narration("ก" * 400, "Thai")) == 150
+    assert len(review.clip_narration("kata " * 100, "Indonesian").split()) == 37
+
+
+def test_scene_prompt_uses_the_project_language(tmp_path, monkeypatch) -> None:
+    client, pid, project = _project_with_character(tmp_path, monkeypatch)
+    data = json.loads((project / "project.json").read_text())
+    data["settings"]["language"] = "Thai"
+    (project / "project.json").write_text(json.dumps(data))
+    seen = _scene_with_crop(client, pid, project, None, monkeypatch)
+    assert "<d>[Thai] hi</d>" in seen["prompt"]
